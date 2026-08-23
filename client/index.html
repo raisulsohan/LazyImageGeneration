@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lazy-Image — After Effects</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Hind+Siliguri:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- HEADER BAR -->
+        <header class="header">
+            <div class="logo-title">
+                <h1>Lazy-Image <span class="app-tag">After Effects</span></h1>
+                <span class="developer-credit">Developed By Raisul Sohan</span>
+            </div>
+            <div class="connection-status">
+                <span class="info-icon" title="Make sure the Lazy-Image Chrome Extension is active and you are logged into ChatGPT">ℹ️</span>
+                <span class="connection-badge disconnected">Disconnected</span>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <!-- LEFT PANEL -->
+            <div class="left-panel">
+                <!-- Section: Image Prompt -->
+                <section class="section prompt-section">
+                    <h2>Image Prompt</h2>
+                    <textarea id="promptInput" placeholder="Describe the image you want to generate (Any language supported: English, বাংলা, etc.)..."></textarea>
+                </section>
+
+                <!-- Section: Aspect Ratio -->
+                <section class="section">
+                    <h2>Aspect Ratio</h2>
+                    <div class="ratio-presets">
+                        <button class="ratio-btn active" data-ratio="1:1">1:1</button>
+                        <button class="ratio-btn" data-ratio="16:9">16:9</button>
+                        <button class="ratio-btn" data-ratio="9:16">9:16</button>
+                        <button class="ratio-btn" data-ratio="4:5">4:5</button>
+                        <button class="ratio-btn custom-btn" data-ratio="custom">Custom</button>
+                    </div>
+                    <div id="customRatioInput" class="custom-ratio-input" style="display: none;">
+                        <input type="number" id="ratioW" placeholder="16" min="1">
+                        <span class="ratio-separator">:</span>
+                        <input type="number" id="ratioH" placeholder="9" min="1">
+                    </div>
+                </section>
+
+                <button id="generateBtn" class="generate-btn">✨ Generate Image</button>
+            </div>
+
+            <!-- RIGHT PANEL -->
+            <div class="right-panel">
+                <h2>Generated Image</h2>
+                <div id="previewArea" class="preview-area">
+                    <div class="empty-state">
+                        <span class="camera-icon">📷</span>
+                        <p>Generated image will appear here</p>
+                    </div>
+                    <div class="spinner" style="display: none;"></div>
+                </div>
+                <div id="actionButtons" class="action-buttons" style="display: none; margin-top: 15px; gap: 10px; justify-content: center;">
+                    <button id="copyBtn" class="secondary-btn" style="padding: 8px 15px; font-size: 13px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; color: white; cursor: pointer;">📋 Copy Image</button>
+                    <button id="openFolderBtn" class="secondary-btn" style="padding: 8px 15px; font-size: 13px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; color: white; cursor: pointer;">📂 Open Folder</button>
+                </div>
+                
+                <div id="statusBar" class="status-bar" style="display: none;">
+                    <span class="status-text"></span>
+                    <span class="comp-badge"></span>
+                </div>
+
+                <div class="footer">
+                    <span class="footer-info">🔗 Auto-timeline import active</span>
+                    <span class="footer-meta"></span>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script src="js/CSInterface.js"></script>
+    <script src="js/utils/storage.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

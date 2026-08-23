@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lazy-Image Bridge</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="header">
+        <h2>Lazy-Image Bridge</h2>
+    </div>
+    
+    <div class="status-container">
+        <div class="status-row">
+            <span class="label">AE Server:</span>
+            <div class="status-indicator">
+                <span id="ae-dot" class="dot"></span>
+                <span id="ae-text">Checking...</span>
+            </div>
+        </div>
+        
+        <div class="status-row">
+            <span class="label">ChatGPT:</span>
+            <div class="status-indicator">
+                <span id="gpt-dot" class="dot"></span>
+                <span id="gpt-text">Checking...</span>
+            </div>
+        </div>
+    </div>
+    
+    <div id="error-message" class="error-msg" style="display: none;"></div>
+
+    <div class="footer">
+        <p>Chrome must remain open in background</p>
+    </div>
+    
+    <script src="popup.js"></script>
+</body>
+</html>
