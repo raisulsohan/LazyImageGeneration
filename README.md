@@ -2,7 +2,13 @@
 
 > **AI Image Generation directly inside Adobe After Effects using your existing ChatGPT account — No API keys or extra billing required!**
 
-Developed with ❤️ by **[Raisul Sohan](https://github.com/raisulsohan)**
+Developed with ❤️ by **[Raisul Sohan](https://raisulsohan.com)**
+
+---
+
+<p align="center">
+  <img src="assets/preview.png" alt="Lazy-Image After Effects Extension UI" width="750">
+</p>
 
 ---
 
@@ -99,6 +105,8 @@ graph LR
 
 ```
 LazyImageGeneration/
+├── assets/
+│   └── preview.png           # Extension UI preview screenshot
 ├── CSXS/
 │   └── manifest.xml          # Adobe CEP extension manifest
 ├── client/
@@ -150,6 +158,7 @@ Yes! Lazy-Image fully supports UTF-8 Unicode. You can write prompts in বাং
 ## 👨‍💻 Author
 
 **Raisul Sohan**
+- Website: [raisulsohan.com](https://raisulsohan.com)
 - GitHub: [@raisulsohan](https://github.com/raisulsohan)
 
 ---
