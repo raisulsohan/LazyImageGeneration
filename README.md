@@ -2,7 +2,7 @@
 
 > **AI Image Generation directly inside Adobe After Effects using your existing ChatGPT account — No API keys, no Chrome Extension, no extra billing required!**
 
-Developed with ❤️ by **[Raisul Sohan](https://raisulsohan.com)** · **Version 2.0**
+Developed with ❤️ by **[Raisul Sohan](https://raisulsohan.com)** · **Version 2.1**
 
 ---
 
@@ -12,15 +12,21 @@ Developed with ❤️ by **[Raisul Sohan](https://raisulsohan.com)** · **Versio
 
 ---
 
-## 🆕 What's New in 2.0
+## 🆕 What's New
 
-- **Invisible, on-demand ChatGPT** — no browser window during generation; your default browser (Chrome or Edge) starts hidden for each image and closes right after. Replaces the Chrome extension from 1.x.
+### 2.1
+
 - **Uses your default browser** — Chrome, Edge, Brave or Vivaldi, whichever Windows is set to.
+- **`ChatGptImages` folder in the Project panel** — every imported image is collected there.
+- **Progress percentage** while ChatGPT creates the image (an estimate — ChatGPT doesn't report real progress).
+
+### 2.0
+
+- **Invisible, on-demand ChatGPT** — no browser window during generation; the browser starts hidden for each image and closes right after. Replaces the Chrome extension from 1.x.
 - **One-time login** in a normal browser window that closes by itself once you're logged in.
 - **Never steals keyboard focus** from After Effects.
 - **`chatgptimages` folder** created automatically next to your project file, with an "Image removed" tip when an image is deleted from it.
-- **`ChatGptImages` folder in the Project panel** — every imported image is collected there.
-- **Cancel button** and a live progress percentage (an estimate — ChatGPT doesn't report real progress).
+- **Cancel button** to stop a running generation.
 - Updated for ChatGPT's current web interface.
 
 ---
