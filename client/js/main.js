@@ -1,107 +1,29 @@
 // === INITIALIZATION ===
 const csInterface = new CSInterface();
-const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const url = require('url');
 const cp = require('child_process');
 
-const SERVER_PORT = 7890;
-let httpServer = null;
-let pendingRequest = null;
-let currentResult = null;
-let currentProvider = 'chatgpt';
+const IMAGE_FOLDER_NAME = 'chatgptimages';
+
 let isGenerating = false;
-let chromeConnected = false;
-let lastPingTime = 0;
-
-// === HTTP SERVER ===
-function startHttpServer() {
-    httpServer = http.createServer((req, res) => {
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-        res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-        
-        if (req.method === 'OPTIONS') {
-            res.writeHead(204);
-            res.end();
-            return;
-        }
-        
-        const parsedUrl = url.parse(req.url, true);
-        
-        if (parsedUrl.pathname === '/api/ping' && req.method === 'GET') {
-            lastPingTime = Date.now();
-            chromeConnected = true;
-            updateConnectionUI();
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ status: 'ok', timestamp: Date.now() }));
-        }
-        else if (parsedUrl.pathname === '/api/pending' && req.method === 'GET') {
-            lastPingTime = Date.now();
-            chromeConnected = true;
-            updateConnectionUI();
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            if (pendingRequest) {
-                const request = { ...pendingRequest };
-                pendingRequest = null;
-                res.end(JSON.stringify(request));
-            } else {
-                res.end(JSON.stringify(null));
-            }
-        }
-        else if (parsedUrl.pathname === '/api/result' && req.method === 'POST') {
-            let body = '';
-            req.on('data', chunk => { body += chunk; });
-            req.on('end', () => {
-                try {
-                    currentResult = JSON.parse(body);
-                    processResult(currentResult);
-                    res.writeHead(200, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ received: true }));
-                } catch (e) {
-                    res.writeHead(400, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ error: 'Invalid JSON' }));
-                }
-            });
-        }
-        else {
-            res.writeHead(404);
-            res.end('Not Found');
-        }
-    });
-    
-    httpServer.listen(SERVER_PORT, '127.0.0.1', () => {
-        console.log('Lazy-Image HTTP server running on http://127.0.0.1:' + SERVER_PORT);
-    });
-    
-    httpServer.on('error', (err) => {
-        console.error('HTTP Server error:', err);
-        if (err.code === 'EADDRINUSE') {
-            setTimeout(() => httpServer.listen(SERVER_PORT + 1, '127.0.0.1'), 1000);
-        }
-    });
-}
-
-// === CONNECTION MONITORING ===
-setInterval(() => {
-    const wasConnected = chromeConnected;
-    chromeConnected = (Date.now() - lastPingTime) < 5000;
-    if (wasConnected !== chromeConnected) {
-        updateConnectionUI();
-    }
-}, 2000);
+let isLoggingIn = false;
+let imageFolderWatcher = null;
+let watchedImageFolder = null;
 
 // === EVENT LISTENERS ===
 document.addEventListener('DOMContentLoaded', () => {
-    startHttpServer();
     initializeUI();
+    updateConnectionUI();
+    refreshImageFolderWatch();
 });
 
+// The open project can change while the panel stays open; re-check whenever the panel is used.
+window.addEventListener('focus', refreshImageFolderWatch);
+
+// === UI INITIALIZATION ===
 function initializeUI() {
-    currentProvider = 'chatgpt';
-    
     // Aspect ratio presets
     document.querySelectorAll('.ratio-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -114,23 +36,35 @@ function initializeUI() {
             }
         });
     });
-    
+
     // Generate button
     document.getElementById('generateBtn').addEventListener('click', handleGenerate);
-    
+
     // Ctrl+Enter to generate
     document.getElementById('promptInput').addEventListener('keydown', (e) => {
         if (e.ctrlKey && e.key === 'Enter') {
             handleGenerate();
         }
     });
-    
+
+    // Cancel button
+    const cancelBtn = document.getElementById('cancelBtn');
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', handleCancel);
+    }
+
+    // Login button
+    const loginBtn = document.getElementById('loginBtn');
+    if (loginBtn) {
+        loginBtn.addEventListener('click', handleLogin);
+    }
+
     // Copy button
     const copyBtn = document.getElementById('copyBtn');
     if (copyBtn) {
         copyBtn.addEventListener('click', handleCopyImage);
     }
-    
+
     // Open folder button
     const openBtn = document.getElementById('openFolderBtn');
     if (openBtn) {
@@ -138,21 +72,52 @@ function initializeUI() {
     }
 }
 
+// === HANDLE LOGIN ===
+// Opens a visible browser window once; it closes by itself after a successful login.
+async function handleLogin() {
+    if (isLoggingIn || isGenerating) return;
+    isLoggingIn = true;
+    updateConnectionUI();
+    showStatus('Opening a browser window for ChatGPT...', 'loading');
+
+    try {
+        const result = await BrowserBridge.login((event) => {
+            if (event === 'opened') {
+                showStatus('🌐 Log in to ChatGPT in the browser window — it closes by itself when you are done.', 'warning');
+            } else if (event === 'already') {
+                showStatus('✅ You are already logged in. Close the browser window when you are done.', 'success');
+            } else if (event === 'verifying') {
+                showStatus('Checking your ChatGPT login...', 'loading');
+            }
+        });
+
+        if (result.loggedIn) {
+            showStatus('✅ Logged in to ChatGPT! Generate images right here — no browser needed.', 'success');
+        } else {
+            showStatus('⚠️ Login was not completed. Click "Login to ChatGPT" to try again.', 'error');
+        }
+    } catch (e) {
+        showStatus('❌ ' + e.message, 'error');
+    } finally {
+        isLoggingIn = false;
+        updateConnectionUI();
+    }
+}
+
 // === HANDLE GENERATE ===
 async function handleGenerate() {
     if (isGenerating) return;
-    
+    if (isLoggingIn) {
+        showStatus('Finish the ChatGPT login (or close the browser window) first.', 'warning');
+        return;
+    }
+
     const prompt = document.getElementById('promptInput').value.trim();
     if (!prompt) {
         showStatus('Please enter an image prompt.', 'error');
         return;
     }
-    
-    if (!chromeConnected) {
-        showStatus('Chrome Extension is not connected. Is Lazy-Image Extension running in Chrome?', 'error');
-        return;
-    }
-    
+
     // Get aspect ratio
     const activeRatioBtn = document.querySelector('.ratio-btn.active');
     let aspectRatio = activeRatioBtn ? activeRatioBtn.dataset.ratio : '1:1';
@@ -161,98 +126,125 @@ async function handleGenerate() {
         const h = document.getElementById('ratioH').value || '9';
         aspectRatio = w + ':' + h;
     }
-    
+
     // Set generating state
     isGenerating = true;
-    setButtonLoading(true);
+    setGeneratingUI(true);
     showPreviewLoading();
-    showStatus('Generating image with AI...', 'loading');
-    
-    // Create pending request for Chrome Extension to pick up
-    const requestId = 'req_' + Date.now();
-    pendingRequest = {
-        id: requestId,
-        prompt: prompt,
-        provider: currentProvider,
-        aspectRatio: aspectRatio
+    updateConnectionUI();
+
+    const startedAt = Date.now();
+    let stage = 'Starting...';
+    const renderProgress = () => {
+        showStatus('🔄 ' + stage + ' ' + Math.round((Date.now() - startedAt) / 1000) + 's', 'loading');
     };
-    
-    // Timeout after 180 seconds
-    setTimeout(() => {
-        if (isGenerating && pendingRequest && pendingRequest.id === requestId) {
-            pendingRequest = null;
-            isGenerating = false;
-            setButtonLoading(false);
-            hidePreviewLoading();
-            showStatus('Timeout — Image generation took too long. Please try again.', 'error');
+    renderProgress();
+    const ticker = setInterval(renderProgress, 1000);
+
+    try {
+        const result = await BrowserBridge.generate(prompt, aspectRatio, (message) => {
+            stage = message;
+            renderProgress();
+        });
+        clearInterval(ticker);
+        await processResult(result);
+    } catch (e) {
+        clearInterval(ticker);
+        if (e.code === 'CANCELLED') {
+            showStatus('Generation cancelled.', 'warning');
+        } else if (e.code === 'NOT_LOGGED_IN' || e.code === 'CHALLENGE' || e.code === 'DIALOG') {
+            showStatus('⚠️ ' + e.message, 'error');
+        } else {
+            showStatus('❌ ' + e.message, 'error');
         }
-    }, 180000);
+    } finally {
+        clearInterval(ticker);
+        isGenerating = false;
+        setGeneratingUI(false);
+        hidePreviewLoading();
+        updateConnectionUI();
+    }
 }
 
-// === FIND AE PROJECT FOLDER (reads AE preferences MRU list) ===
-function findAEProjectFolder() {
+function handleCancel() {
+    if (!isGenerating) return;
+    showStatus('Cancelling...', 'warning');
+    BrowserBridge.cancel();
+}
+
+// === FIND AE PROJECT FOLDER (asks After Effects for the open project's file) ===
+function getProjectFolder() {
+    return new Promise((resolve) => {
+        const script = '(function(){ try { return (app.project && app.project.file) ? app.project.file.fsName : ""; } catch (e) { return ""; } })()';
+        csInterface.evalScript(script, (result) => {
+            const dir = result && result.indexOf('EvalScript') !== 0 ? path.dirname(result) : null;
+            resolve(dir && fs.existsSync(dir) ? dir : null);
+        });
+    });
+}
+
+// === IMAGE FOLDER: <project folder>/chatgptimages, or Documents/chatgptimages for unsaved projects ===
+async function getImageFolder() {
+    const projectFolder = await getProjectFolder();
+    return path.join(projectFolder || path.join(os.homedir(), 'Documents'), IMAGE_FOLDER_NAME);
+}
+
+async function refreshImageFolderWatch() {
+    watchImageFolder(await getImageFolder());
+}
+
+// Shows a tip whenever an image disappears from the image folder. Windows reports deletes,
+// moves to the Recycle Bin and renames all as "rename"; a rename also makes a new name appear,
+// so events are batched and only net disappearances count.
+function watchImageFolder(folder) {
+    if (folder === watchedImageFolder && imageFolderWatcher) return;
+    if (imageFolderWatcher) imageFolderWatcher.close();
+    imageFolderWatcher = null;
+    watchedImageFolder = null;
+    if (!fs.existsSync(folder)) return;
+
+    let gone = 0;
+    let appeared = 0;
+    let batchTimer = null;
+    let watcher;
     try {
-        const aePrefsRoot = path.join(os.homedir(), 'AppData', 'Roaming', 'Adobe', 'After Effects');
-        if (!fs.existsSync(aePrefsRoot)) return null;
-        
-        // Find all version folders sorted descending (newest first)
-        const versionDirs = fs.readdirSync(aePrefsRoot)
-            .filter(d => /^\d/.test(d))
-            .sort((a, b) => parseFloat(b) - parseFloat(a));
-        
-        // Collect all MRU paths from all versions
-        let mruPaths = [];
-        for (const ver of versionDirs) {
-            const prefsDir = path.join(aePrefsRoot, ver);
-            if (!fs.existsSync(prefsDir)) continue;
-            const files = fs.readdirSync(prefsDir).filter(f => f.endsWith('Prefs.txt'));
-            for (const pf of files) {
-                try {
-                    const content = fs.readFileSync(path.join(prefsDir, pf), 'utf8');
-                    const regex = /"MRU Project Path ID # \d+, File Path"\s*=\s*"([^"]+\.aep)"/g;
-                    let m;
-                    while ((m = regex.exec(content)) !== null) {
-                        mruPaths.push(m[1]);
-                    }
-                } catch(e) {}
-            }
-        }
-        
-        // Find which MRU path actually exists AND was most recently modified
-        let bestPath = null;
-        let bestTime = 0;
-        for (const p of mruPaths) {
-            try {
-                if (fs.existsSync(p)) {
-                    const stat = fs.statSync(p);
-                    if (stat.mtimeMs > bestTime) {
-                        bestTime = stat.mtimeMs;
-                        bestPath = p;
-                    }
-                }
-            } catch(e) {}
-        }
-        
-        if (bestPath) {
-            return path.dirname(bestPath);
-        }
-    } catch(e) {
-        console.log('AE project folder detection skipped:', e.message);
+        watcher = fs.watch(folder, (eventType, fileName) => {
+            if (eventType !== 'rename' || !fileName || !/\.(png|jpe?g|webp)$/i.test(fileName)) return;
+            if (fs.existsSync(path.join(folder, fileName))) appeared++;
+            else gone++;
+            clearTimeout(batchTimer);
+            batchTimer = setTimeout(() => {
+                const removed = gone - appeared;
+                gone = 0;
+                appeared = 0;
+                if (removed > 0) showToast('🗑️ ' + (removed === 1 ? 'Image removed' : removed + ' images removed'));
+            }, 400);
+        });
+    } catch (e) {
+        return;
     }
-    return null;
+    watcher.on('error', () => {
+        watcher.close();
+        if (imageFolderWatcher === watcher) {
+            imageFolderWatcher = null;
+            watchedImageFolder = null;
+        }
+    });
+    imageFolderWatcher = watcher;
+    watchedImageFolder = folder;
 }
 
 // === AUTO-IMPORT FOOTAGE TO TIMELINE ===
 function autoImportToTimeline(filePath) {
     try {
         const safePath = filePath.replace(/\\/g, '/').replace(/"/g, '\\"');
-        
+
         const script = `
 (function() {
     try {
         var f = new File("${safePath}");
         if (!f.exists) return "FILE_NOT_FOUND";
-        
+
         app.beginUndoGroup("Lazy-Image: Auto Import");
         var io = new ImportOptions(f);
         io.importAs = ImportAsType.FOOTAGE;
@@ -262,7 +254,7 @@ function autoImportToTimeline(filePath) {
             app.endUndoGroup();
             return "IMPORT_FAILED";
         }
-        
+
         var targetComp = null;
         if (app.project.activeItem && app.project.activeItem instanceof CompItem) {
             targetComp = app.project.activeItem;
@@ -275,7 +267,7 @@ function autoImportToTimeline(filePath) {
                 }
             }
         }
-        
+
         if (targetComp) {
             var layer = targetComp.layers.add(footage);
             try { layer.startTime = targetComp.time; } catch(tErr) {}
@@ -310,53 +302,42 @@ function autoImportToTimeline(filePath) {
 }
 
 // === PROCESS RESULT ===
-function processResult(result) {
+async function processResult(result) {
     if (!result) return;
-    isGenerating = false;
-    setButtonLoading(false);
-    hidePreviewLoading();
-    
+
     if (!result.success) {
         showStatus(result.error || 'Failed to generate image.', 'error');
         return;
     }
-    
+
     // Save image to disk
     showStatus('Saving image to project folder...', 'loading');
-    
+
     const imageBuffer = Buffer.from(result.imageBase64, 'base64');
     const format = result.format || 'png';
-    
-    // Find AE project folder
-    let saveDir = null;
-    const aeFolder = findAEProjectFolder();
-    if (aeFolder) {
-        saveDir = path.join(aeFolder, 'AI_Generated');
-    } else {
-        // Fallback silently to Documents
-        saveDir = path.join(os.homedir(), 'Documents', 'GImage_Generated');
-    }
-    
+
+    const saveDir = await getImageFolder();
     if (!fs.existsSync(saveDir)) {
         fs.mkdirSync(saveDir, { recursive: true });
     }
-    
-    const fileName = 'lazy_image_' + result.provider + '_' + Date.now() + '.' + format;
+
+    const fileName = 'lazy_image_' + (result.provider || 'chatgpt') + '_' + Date.now() + '.' + format;
     const filePath = path.join(saveDir, fileName);
     fs.writeFileSync(filePath, imageBuffer);
-    
+    watchImageFolder(saveDir);
+
     // Show preview in panel
     showPreviewImage(filePath);
-    
+
     // Update footer meta
     const footerMeta = document.querySelector('.footer-meta');
     if (footerMeta) {
         footerMeta.textContent = (result.dimensions || '') + ' ' + format.toUpperCase();
     }
-    
+
     // Automatically import into active comp / timeline
     autoImportToTimeline(filePath);
-    
+
     window.currentGeneratedImagePath = filePath;
     const btnContainer = document.getElementById('actionButtons');
     if (btnContainer) btnContainer.style.display = 'flex';
@@ -365,11 +346,11 @@ function processResult(result) {
 // === MANUAL ACTIONS ===
 function handleCopyImage() {
     if (!window.currentGeneratedImagePath) return;
-    
+
     try {
         const safePath = window.currentGeneratedImagePath.replace(/\\/g, '\\\\').replace(/'/g, "''");
         const cmd = 'powershell -command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Clipboard]::SetImage([System.Drawing.Image]::FromFile(\'' + safePath + '\'))"';
-        cp.exec(cmd, (err) => {
+        cp.exec(cmd, { windowsHide: true }, (err) => {
             if (err) {
                 showStatus('❌ Failed to copy: ' + err.message, 'error');
             } else {
@@ -394,21 +375,30 @@ function handleOpenFolder() {
 
 // === UI HELPER FUNCTIONS ===
 
-function updateActiveTab() {
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.engine === currentProvider);
-    });
-}
-
 function updateConnectionUI() {
     const badge = document.querySelector('.connection-badge');
-    if (!badge) return;
-    if (chromeConnected) {
-        badge.textContent = 'Connected';
+    const loginBtn = document.getElementById('loginBtn');
+    if (!badge || !loginBtn) return;
+
+    const status = BrowserBridge.getStatus();
+    loginBtn.disabled = isLoggingIn || isGenerating;
+
+    if (isLoggingIn) {
+        badge.textContent = 'Browser open';
+        badge.className = 'connection-badge ready';
+        loginBtn.textContent = '⏳ Waiting for login...';
+    } else if (status.loggedIn) {
+        badge.textContent = 'Logged in';
         badge.className = 'connection-badge connected';
+        loginBtn.textContent = '🌐 Open ChatGPT';
+        loginBtn.classList.add('subtle');
+        loginBtn.title = 'Open ChatGPT in a browser window — only needed to switch accounts or complete a verification';
     } else {
-        badge.textContent = 'Disconnected';
-        badge.className = 'connection-badge disconnected';
+        badge.textContent = 'Login required';
+        badge.className = 'connection-badge login-required';
+        loginBtn.textContent = '🌐 Login to ChatGPT';
+        loginBtn.classList.remove('subtle');
+        loginBtn.title = 'Open a browser window once to log in to ChatGPT';
     }
 }
 
@@ -416,19 +406,33 @@ function showStatus(message, type) {
     const statusBar = document.getElementById('statusBar');
     const statusText = document.querySelector('.status-text');
     if (!statusBar || !statusText) return;
-    
+
     statusBar.style.display = 'flex';
     statusText.textContent = message;
     statusBar.className = 'status-bar status-' + type;
 }
 
-function setButtonLoading(loading) {
+let toastTimer = null;
+
+function showToast(message) {
+    const toast = document.getElementById('toast');
+    if (!toast) return;
+    toast.textContent = message;
+    toast.classList.add('visible');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('visible'), 2500);
+}
+
+function setGeneratingUI(loading) {
     const btn = document.getElementById('generateBtn');
-    if (!btn) return;
-    btn.disabled = loading;
-    btn.innerHTML = loading 
-        ? '<span class="btn-spinner"></span> Generating...'
-        : '✨ Generate Image';
+    if (btn) {
+        btn.disabled = loading;
+        btn.innerHTML = loading
+            ? '<span class="btn-spinner"></span> Generating...'
+            : '✨ Generate Image';
+    }
+    const cancelBtn = document.getElementById('cancelBtn');
+    if (cancelBtn) cancelBtn.hidden = !loading;
 }
 
 function showPreviewLoading() {
@@ -445,14 +449,20 @@ function showPreviewImage(filePath) {
     const area = document.getElementById('previewArea');
     const emptyState = area.querySelector('.empty-state');
     if (emptyState) emptyState.style.display = 'none';
-    
+
     // Remove existing image if any
     const existingImg = area.querySelector('img');
     if (existingImg) existingImg.remove();
-    
+
     const img = document.createElement('img');
     img.src = 'file:///' + filePath.replace(/\\/g, '/') + '?t=' + Date.now();
     img.alt = 'Generated Image';
     img.className = 'preview-image';
     area.appendChild(img);
 }
+
+// === CLEANUP on panel close: never leave Chrome running behind the panel ===
+window.addEventListener('beforeunload', () => {
+    BrowserBridge.shutdown();
+    if (imageFolderWatcher) imageFolderWatcher.close();
+});

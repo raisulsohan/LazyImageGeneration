@@ -16,8 +16,9 @@
                 <span class="developer-credit">Developed By Raisul Sohan</span>
             </div>
             <div class="connection-status">
-                <span class="info-icon" title="Make sure the Lazy-Image Chrome Extension is active and you are logged into ChatGPT">ℹ️</span>
-                <span class="connection-badge disconnected">Disconnected</span>
+                <button id="loginBtn" class="login-btn" title="Open a browser window once to log in to ChatGPT">🌐 Login to ChatGPT</button>
+                <span class="info-icon" title="Log in once with the button. After that, images are generated right here — ChatGPT runs invisibly only while an image is being created, then closes.">ℹ️</span>
+                <span class="connection-badge login-required">Login required</span>
             </div>
         </header>
 
@@ -48,6 +49,7 @@
                 </section>
 
                 <button id="generateBtn" class="generate-btn">✨ Generate Image</button>
+                <button id="cancelBtn" class="cancel-btn" hidden>✕ Cancel</button>
             </div>
 
             <!-- RIGHT PANEL -->
@@ -77,9 +79,12 @@
             </div>
         </main>
     </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
     
     <script src="js/CSInterface.js"></script>
     <script src="js/utils/storage.js"></script>
+    <script src="js/browser-bridge.js"></script>
     <script src="js/main.js"></script>
 </body>
 </html>

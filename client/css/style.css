@@ -108,6 +108,66 @@ body {
     animation: pulse 2s infinite;
 }
 
+.connection-badge.login-required {
+    background-color: rgba(255, 171, 0, 0.2);
+    color: var(--accent-yellow);
+    border: 1px solid var(--accent-yellow);
+    animation: pulse 2s infinite;
+}
+
+.connection-badge.ready {
+    background-color: rgba(0, 200, 83, 0.15);
+    color: var(--accent-green);
+    border: 1px solid rgba(0, 200, 83, 0.5);
+}
+
+.login-btn {
+    background: linear-gradient(135deg, #1a73e8, #00bcd4);
+    color: white;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: opacity 0.2s, transform 0.1s;
+    white-space: nowrap;
+}
+
+.login-btn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.login-btn:active {
+    transform: translateY(0);
+}
+
+.login-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.login-btn.subtle {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+}
+
+.login-btn.subtle:hover {
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+}
+
+[hidden] {
+    display: none !important;
+}
+
 @keyframes pulse {
     0% { opacity: 1; }
     50% { opacity: 0.6; }
@@ -285,6 +345,24 @@ textarea:focus {
     cursor: not-allowed;
 }
 
+.cancel-btn {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    padding: 8px;
+    margin-top: -8px;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+}
+
+.cancel-btn:hover {
+    color: var(--accent-red);
+    border-color: var(--accent-red);
+}
+
 .btn-spinner {
     width: 16px;
     height: 16px;
@@ -384,6 +462,30 @@ textarea:focus {
     background: linear-gradient(to right, rgba(26,115,232,0.1), rgba(0,188,212,0.1));
     border: 1px solid var(--accent-blue);
     color: var(--accent-cyan);
+}
+
+.toast {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    transform: translate(-50%, 12px);
+    background-color: var(--bg-card);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s, transform 0.25s;
+    z-index: 10;
+}
+
+.toast.visible {
+    opacity: 1;
+    transform: translate(-50%, 0);
 }
 
 .comp-badge {
