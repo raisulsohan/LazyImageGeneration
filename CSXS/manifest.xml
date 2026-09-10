@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<ExtensionManifest Version="9.0" ExtensionBundleId="com.gimage.aftereffects" ExtensionBundleVersion="2.1.0" ExtensionBundleName="Lazy-Image" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<ExtensionManifest Version="9.0" ExtensionBundleId="com.gimage.aftereffects" ExtensionBundleVersion="2.2.0" ExtensionBundleName="Lazy-Image" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <ExtensionList>
-    <Extension Id="com.gimage.aftereffects" Version="2.1.0" />
+    <Extension Id="com.gimage.aftereffects" Version="2.2.0" />
   </ExtensionList>
   <ExecutionEnvironment>
     <HostList>
       <Host Name="AEFT" Version="[16.0,99.9]" />
+      <Host Name="PPRO" Version="[13.0,99.9]" />
     </HostList>
     <LocaleList>
       <Locale Code="All" />
@@ -30,7 +31,7 @@
         </Lifecycle>
         <UI>
           <Type>Panel</Type>
-          <Menu>Lazy-Image — After Effects</Menu>
+          <Menu>Lazy-Image</Menu>
           <Geometry>
             <Size>
               <Height>600</Height>

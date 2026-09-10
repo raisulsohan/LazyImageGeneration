@@ -1,5 +1,5 @@
 @echo off
-echo Lazy-Image — After Effects Installer
+echo Lazy-Image — After Effects ^& Premiere Pro Installer
 echo ====================================
 echo.
 

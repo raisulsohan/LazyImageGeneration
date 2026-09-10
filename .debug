@@ -3,6 +3,7 @@
   <Extension Id="com.gimage.aftereffects">
     <HostList>
       <Host Name="AEFT" Port="8089" />
+      <Host Name="PPRO" Port="8090" />
     </HostList>
   </Extension>
 </ExtensionList>

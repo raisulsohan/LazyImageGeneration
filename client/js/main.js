@@ -8,6 +8,11 @@ const cp = require('child_process');
 const IMAGE_FOLDER_NAME = 'chatgptimages';
 const PROJECT_BIN_NAME = 'ChatGptImages';
 
+// The same panel runs in After Effects and Premiere Pro; only the import step differs per host.
+const HOST_ID = (csInterface.hostEnvironment && csInterface.hostEnvironment.appName) || 'AEFT';
+const IS_PREMIERE = HOST_ID === 'PPRO';
+const HOST_NAME = IS_PREMIERE ? 'Premiere Pro' : 'After Effects';
+
 let isGenerating = false;
 let isLoggingIn = false;
 let imageFolderWatcher = null;
@@ -25,6 +30,9 @@ window.addEventListener('focus', refreshImageFolderWatch);
 
 // === UI INITIALIZATION ===
 function initializeUI() {
+    const hostTag = document.getElementById('hostTag');
+    if (hostTag) hostTag.textContent = HOST_NAME;
+
     // Aspect ratio presets
     document.querySelectorAll('.ratio-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -210,10 +218,12 @@ function handleCancel() {
     BrowserBridge.cancel();
 }
 
-// === FIND AE PROJECT FOLDER (asks After Effects for the open project's file) ===
+// === FIND PROJECT FOLDER (asks the host app for the open project's file) ===
 function getProjectFolder() {
     return new Promise((resolve) => {
-        const script = '(function(){ try { return (app.project && app.project.file) ? app.project.file.fsName : ""; } catch (e) { return ""; } })()';
+        const script = IS_PREMIERE
+            ? '(function(){ try { return (app.project && app.project.path) ? app.project.path : ""; } catch (e) { return ""; } })()'
+            : '(function(){ try { return (app.project && app.project.file) ? app.project.file.fsName : ""; } catch (e) { return ""; } })()';
         csInterface.evalScript(script, (result) => {
             const dir = result && result.indexOf('EvalScript') !== 0 ? path.dirname(result) : null;
             resolve(dir && fs.existsSync(dir) ? dir : null);
@@ -272,12 +282,37 @@ function watchImageFolder(folder) {
     watchedImageFolder = folder;
 }
 
-// === AUTO-IMPORT FOOTAGE TO TIMELINE ===
+// === AUTO-IMPORT INTO THE PROJECT AND TIMELINE ===
 function autoImportToTimeline(filePath) {
     try {
         const safePath = filePath.replace(/\\/g, '/').replace(/"/g, '\\"');
+        const script = (IS_PREMIERE ? buildPremiereImportScript(safePath) : buildAfterEffectsImportScript(safePath))
+            .replace(/[\r\n]+/g, ' ');
 
-        const script = `
+        csInterface.evalScript(script, (result) => {
+            console.log(HOST_NAME + ' import result:', result);
+            if (result && result.startsWith('SUCCESS|')) {
+                showStatus('✅ Generated & added to timeline (' + result.substring(8) + ')', 'success');
+            } else if (result && result.startsWith('SUCCESS_BIN_ONLY|')) {
+                showStatus('✅ Generated & added to the ' + PROJECT_BIN_NAME + ' bin (no free video track at the playhead in ' + result.substring(17) + ')', 'warning');
+            } else if (result === 'SUCCESS_PROJECT') {
+                showStatus('✅ Generated & imported into ' + PROJECT_BIN_NAME + ' (open a ' + (IS_PREMIERE ? 'sequence' : 'comp') + ' to add it to the timeline)', 'warning');
+            } else if (result && result.startsWith('ERROR|')) {
+                console.error('Import error detail:', result);
+                showStatus('✅ Saved to disk. ' + HOST_NAME + ' import: ' + result.substring(6), 'warning');
+            } else {
+                showStatus('✅ Saved to disk, but ' + HOST_NAME + ' could not import it (' + result + ')', 'warning');
+            }
+        });
+    } catch(e) {
+        console.error('Timeline import error:', e);
+    }
+}
+
+// After Effects: import into the ChatGptImages folder and add a layer at the playhead of the
+// active comp (or the first comp in the project).
+function buildAfterEffectsImportScript(safePath) {
+    return `
 (function() {
     try {
         var f = new File("${safePath}");
@@ -331,23 +366,100 @@ function autoImportToTimeline(filePath) {
         return "ERROR|" + e.toString();
     }
 })();
-`.replace(/[\r\n]+/g, ' ');
+`;
+}
 
-        csInterface.evalScript(script, (result) => {
-            console.log('AE Import result:', result);
-            if (result && result.startsWith('SUCCESS|')) {
-                const compName = result.substring(8);
-                showStatus('✅ Generated & added to timeline (' + compName + ')', 'success');
-            } else if (result === 'SUCCESS_PROJECT') {
-                showStatus('✅ Generated & imported into project (Open a comp to add to timeline)', 'warning');
-            } else if (result && result.startsWith('ERROR|')) {
-                console.error('Import error detail:', result);
-                showStatus('✅ Saved to disk. AE Import: ' + result.substring(6), 'warning');
+// Premiere Pro: import into the ChatGptImages bin and place the still at the playhead of the
+// active sequence, on the video track just above everything the still would cover (a track is
+// added when the top track is taken). Existing clips are never overwritten: if no free track is
+// found, the image stays in the bin. Track indices are re-checked after adding a track, so this
+// stays safe wherever Premiere inserts it.
+function buildPremiereImportScript(safePath) {
+    return `
+(function() {
+    try {
+        var filePath = "${safePath}";
+        var BIN_TYPE = (typeof ProjectItemType !== "undefined") ? ProjectItemType.BIN : 2;
+        var root = app.project.rootItem;
+        var findBin = function() {
+            for (var i = 0; i < root.children.numItems; i++) {
+                var child = root.children[i];
+                if (child && child.type === BIN_TYPE && child.name.toLowerCase() === "${PROJECT_BIN_NAME}".toLowerCase()) return child;
             }
-        });
-    } catch(e) {
-        console.error('Timeline import error:', e);
+            return null;
+        };
+        var bin = findBin();
+        if (!bin) {
+            root.createBin("${PROJECT_BIN_NAME}");
+            bin = findBin();
+        }
+        if (!bin) bin = root;
+        if (!app.project.importFiles([filePath], true, bin, false)) return "IMPORT_FAILED";
+
+        var normalize = function(p) { return String(p).split(String.fromCharCode(92)).join("/").toLowerCase(); };
+        var item = null;
+        for (var j = bin.children.numItems - 1; j >= 0; j--) {
+            var candidate = bin.children[j];
+            if (candidate && candidate.type !== BIN_TYPE && normalize(candidate.getMediaPath()) === normalize(filePath)) {
+                item = candidate;
+                break;
+            }
+        }
+        var seq = app.project.activeSequence;
+        if (!item || !seq) return "SUCCESS_PROJECT";
+
+        var pos = seq.getPlayerPosition();
+        var t = pos.seconds;
+        var duration = 5;
+        try {
+            var d = item.getOutPoint().seconds - item.getInPoint().seconds;
+            if (d > 0 && d < 600) duration = d;
+        } catch (dErr) {}
+        var trackCount = function(s) {
+            var n = s.videoTracks.numTracks;
+            return (typeof n === "number") ? n : -1;
+        };
+        var topBusyTrack = function(s) {
+            var top = -1;
+            for (var k = 0; k < trackCount(s); k++) {
+                var clips = s.videoTracks[k].clips;
+                if (typeof clips.numItems !== "number") {
+                    top = k;
+                    continue;
+                }
+                for (var m = 0; m < clips.numItems; m++) {
+                    if (clips[m].start.seconds < t + duration && clips[m].end.seconds > t) {
+                        top = k;
+                        break;
+                    }
+                }
+            }
+            return top;
+        };
+        if (trackCount(seq) < 0) return "SUCCESS_BIN_ONLY|" + seq.name;
+        var target = topBusyTrack(seq) + 1;
+        if (target >= trackCount(seq)) {
+            try {
+                app.enableQE();
+                qe.project.getActiveSequence().addTracks(1, trackCount(seq), 0);
+            } catch (qeErr) {}
+            seq = app.project.activeSequence;
+            target = topBusyTrack(seq) + 1;
+        }
+        if (target >= trackCount(seq)) return "SUCCESS_BIN_ONLY|" + seq.name;
+
+        var before = seq.videoTracks[target].clips.numItems;
+        try { seq.videoTracks[target].overwriteClip(item, pos.ticks); } catch (e1) {}
+        if (seq.videoTracks[target].clips.numItems === before) {
+            try { seq.videoTracks[target].overwriteClip(item, t); } catch (e2) {}
+        }
+        if (seq.videoTracks[target].clips.numItems === before) return "SUCCESS_BIN_ONLY|" + seq.name;
+        return "SUCCESS|" + seq.name;
+    } catch (e) {
+        return "ERROR|" + e.toString();
     }
+})();
+`;
 }
 
 // === PROCESS RESULT ===
