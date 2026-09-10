@@ -19,7 +19,8 @@ Developed with ❤️ by **[Raisul Sohan](https://raisulsohan.com)** · **Versio
 - **One-time login** in a normal browser window that closes by itself once you're logged in.
 - **Never steals keyboard focus** from After Effects.
 - **`chatgptimages` folder** created automatically next to your project file, with an "Image removed" tip when an image is deleted from it.
-- **Cancel button** and a live progress timer.
+- **`ChatGptImages` folder in the Project panel** — every imported image is collected there.
+- **Cancel button** and a live progress percentage (an estimate — ChatGPT doesn't report real progress).
 - Updated for ChatGPT's current web interface.
 
 ---
@@ -42,7 +43,7 @@ Instead of paying for expensive API credits or juggling between browser tabs and
 - 🚫 **No Browser Extension**: Controls the browser directly via CDP — zero extension setup, zero friction.
 - 🔐 **One-Time Login**: Log in to ChatGPT once in a normal browser window — your session is saved in a dedicated Lazy-Image profile and the window closes by itself.
 - ⏹️ **Cancelable**: Stop a running generation at any time from the panel.
-- ⏱️ **Auto-Import to Timeline**: Automatically imports generated images into the project bin and adds them as layers at your current timeline playhead (`comp.time`).
+- ⏱️ **Auto-Import to Timeline**: Automatically imports generated images into a `ChatGptImages` folder in the Project panel and adds them as layers at your current timeline playhead (`comp.time`).
 - 📂 **Smart Project Organization**: Automatically creates a `chatgptimages` folder next to your open `.aep` project file and saves every image there.
 - 🗑️ **Removal Tip**: If an image is deleted from that folder, the panel shows a short "Image removed" notification.
 - 🌍 **Multilingual Prompt Support**: Type your prompts in any language (English, বাংলা, हिन्दी, العربية, Español, etc.) without encoding issues.

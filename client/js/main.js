@@ -6,6 +6,7 @@ const os = require('os');
 const cp = require('child_process');
 
 const IMAGE_FOLDER_NAME = 'chatgptimages';
+const PROJECT_BIN_NAME = 'ChatGptImages';
 
 let isGenerating = false;
 let isLoggingIn = false;
@@ -134,17 +135,23 @@ async function handleGenerate() {
     showPreviewLoading();
     updateConnectionUI();
 
-    const startedAt = Date.now();
-    let stage = 'Starting...';
+    const expectedCreateMs = loadExpectedCreateMs();
+    let stage = 'launch';
+    let stageMessage = 'Starting...';
+    let createStartedAt = 0;
     const renderProgress = () => {
-        showStatus('🔄 ' + stage + ' ' + Math.round((Date.now() - startedAt) / 1000) + 's', 'loading');
+        const createElapsed = createStartedAt ? Date.now() - createStartedAt : 0;
+        showStatus('🔄 ' + stageMessage + ' ' + estimateProgress(stage, createElapsed, expectedCreateMs) + '%', 'loading');
     };
     renderProgress();
     const ticker = setInterval(renderProgress, 1000);
 
     try {
-        const result = await BrowserBridge.generate(prompt, aspectRatio, (message) => {
-            stage = message;
+        const result = await BrowserBridge.generate(prompt, aspectRatio, (message, newStage) => {
+            if (newStage === 'create' && !createStartedAt) createStartedAt = Date.now();
+            if (newStage === 'download' && stage === 'create') rememberCreateDuration(Date.now() - createStartedAt);
+            stage = newStage || stage;
+            stageMessage = message;
             renderProgress();
         });
         clearInterval(ticker);
@@ -165,6 +172,36 @@ async function handleGenerate() {
         hidePreviewLoading();
         updateConnectionUI();
     }
+}
+
+// === PROGRESS ESTIMATE ===
+// ChatGPT doesn't report real progress, so the percentage is an estimate: fixed steps while
+// starting up, then a curve based on how long recent image creations took. It rises linearly
+// up to the expected duration and then creeps toward (never reaching) 95% until the image arrives.
+const STAGE_PROGRESS = { launch: 2, load: 6, send: 10, download: 97 };
+const CREATE_ESTIMATE_KEY = 'lazyimage_expected_create_ms';
+const DEFAULT_CREATE_MS = 40000;
+
+function estimateProgress(stage, createElapsedMs, expectedCreateMs) {
+    if (stage !== 'create') return STAGE_PROGRESS[stage] || 0;
+    const x = createElapsedMs / expectedCreateMs;
+    const f = x <= 1 ? 0.85 * x : 0.85 + 0.15 * (1 - Math.exp(-2 * (x - 1)));
+    return Math.round(10 + 85 * f);
+}
+
+function loadExpectedCreateMs() {
+    try {
+        const ms = parseInt(localStorage.getItem(CREATE_ESTIMATE_KEY), 10);
+        if (ms >= 10000 && ms <= 300000) return ms;
+    } catch (e) {}
+    return DEFAULT_CREATE_MS;
+}
+
+function rememberCreateDuration(ms) {
+    try {
+        const next = Math.round(0.6 * loadExpectedCreateMs() + 0.4 * ms);
+        localStorage.setItem(CREATE_ESTIMATE_KEY, String(Math.min(300000, Math.max(10000, next))));
+    } catch (e) {}
 }
 
 function handleCancel() {
@@ -255,6 +292,17 @@ function autoImportToTimeline(filePath) {
             app.endUndoGroup();
             return "IMPORT_FAILED";
         }
+
+        var bin = null;
+        for (var b = 1; b <= app.project.numItems; b++) {
+            var candidate = app.project.item(b);
+            if (candidate instanceof FolderItem && candidate.name.toLowerCase() === "${PROJECT_BIN_NAME}".toLowerCase()) {
+                bin = candidate;
+                break;
+            }
+        }
+        if (!bin) bin = app.project.items.addFolder("${PROJECT_BIN_NAME}");
+        footage.parentFolder = bin;
 
         var targetComp = null;
         if (app.project.activeItem && app.project.activeItem instanceof CompItem) {

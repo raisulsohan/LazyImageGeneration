@@ -782,7 +782,7 @@ async function waitForImage(conn, s, progress) {
         if (Date.now() - start > GENERATION_TIMEOUT_MS) {
             throw bridgeError('TIMEOUT', 'No image arrived within 6 minutes. ChatGPT may be busy — please try again.');
         }
-        progress('ChatGPT is creating your image…');
+        progress('ChatGPT is creating your image…', 'create');
         await sleep(1500);
     }
 }
@@ -849,18 +849,18 @@ async function generate(prompt, aspectRatio, onProgress) {
     let s = null;
     let conn = null;
     try {
-        progress('Starting ChatGPT in the background…');
+        progress('Starting ChatGPT in the background…', 'launch');
         s = await launchBrowser(false, CHATGPT_URL);
         conn = await connectToChatGPT(s);
-        progress('Loading ChatGPT…');
+        progress('Loading ChatGPT…', 'load');
         await waitForChatGPT(conn, s);
         markAuthenticated(s.browser);
 
-        progress('Sending prompt…');
+        progress('Sending prompt…', 'send');
         await sendPrompt(conn, s, buildPrompt(prompt, aspectRatio));
         const image = await waitForImage(conn, s, progress);
 
-        progress('Downloading image…');
+        progress('Downloading image…', 'download');
         const data = await downloadImage(conn, image);
         return {
             success: true,
