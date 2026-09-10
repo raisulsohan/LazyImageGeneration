@@ -317,8 +317,12 @@ function describeBrowser(exe) {
 function findBrowser() {
     if (Date.now() - browserCache.at < 5000) return browserCache.value;
 
+    // Newer Windows 11 builds keep the current choice in UserChoiceLatest\ProgId and can leave a
+    // stale value in UserChoice, so the newer key wins.
     const choice = 'HKCU\\Software\\Microsoft\\Windows\\Shell\\Associations\\UrlAssociations\\https';
-    const progId = regValue(choice + '\\UserChoiceLatest', 'ProgId') || regValue(choice + '\\UserChoice', 'ProgId');
+    const progId = regValue(choice + '\\UserChoiceLatest\\ProgId', 'ProgId') ||
+        regValue(choice + '\\UserChoiceLatest', 'ProgId') ||
+        regValue(choice + '\\UserChoice', 'ProgId');
     let browser = progId ? describeBrowser(exeFromCommand(regValue('HKCR\\' + progId + '\\shell\\open\\command'))) : null;
 
     if (!browser) {
