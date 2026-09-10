@@ -83,7 +83,8 @@ async function handleLogin() {
     try {
         const result = await BrowserBridge.login((event) => {
             if (event === 'opened') {
-                showStatus('🌐 Log in to ChatGPT in the browser window — it closes by itself when you are done.', 'warning');
+                const browserName = BrowserBridge.getStatus().browserName || 'browser';
+                showStatus('🌐 Log in to ChatGPT in the ' + browserName + ' window — it closes by itself when you are done.', 'warning');
             } else if (event === 'already') {
                 showStatus('✅ You are already logged in. Close the browser window when you are done.', 'success');
             } else if (event === 'verifying') {
@@ -461,7 +462,7 @@ function showPreviewImage(filePath) {
     area.appendChild(img);
 }
 
-// === CLEANUP on panel close: never leave Chrome running behind the panel ===
+// === CLEANUP on panel close: never leave the browser running behind the panel ===
 window.addEventListener('beforeunload', () => {
     BrowserBridge.shutdown();
     if (imageFolderWatcher) imageFolderWatcher.close();

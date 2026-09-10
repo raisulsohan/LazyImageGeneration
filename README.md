@@ -7,14 +7,15 @@ Developed with ❤️ by **[Raisul Sohan](https://raisulsohan.com)** · **Versio
 ---
 
 <p align="center">
-  <img src="assets/preview.png" alt="Lazy-Image After Effects Extension UI" width="750">
+  <img src="assets/preview-v2.png" alt="Lazy-Image After Effects Extension UI" width="750">
 </p>
 
 ---
 
 ## 🆕 What's New in 2.0
 
-- **Invisible, on-demand ChatGPT** — no browser window during generation; Chrome starts hidden for each image and closes right after. Replaces the Chrome extension from 1.x.
+- **Invisible, on-demand ChatGPT** — no browser window during generation; your default browser (Chrome or Edge) starts hidden for each image and closes right after. Replaces the Chrome extension from 1.x.
+- **Uses your default browser** — Chrome, Edge, Brave or Vivaldi, whichever Windows is set to.
 - **One-time login** in a normal browser window that closes by itself once you're logged in.
 - **Never steals keyboard focus** from After Effects.
 - **`chatgptimages` folder** created automatically next to your project file, with an "Image removed" tip when an image is deleted from it.
@@ -27,18 +28,19 @@ Developed with ❤️ by **[Raisul Sohan](https://raisulsohan.com)** · **Versio
 
 **Lazy-Image** is a native Adobe After Effects CEP extension that seamlessly integrates AI image generation into your motion design and visual effects workflow. 
 
-Instead of paying for expensive API credits or juggling between browser tabs and file explorers, **Lazy-Image** drives **ChatGPT** through an invisible Chrome instance via the **Chrome DevTools Protocol (CDP)**, generates the image according to your prompt and aspect ratio, saves it inside your After Effects project folder, and **automatically places it onto your active composition timeline at the current playhead position.**
+Instead of paying for expensive API credits or juggling between browser tabs and file explorers, **Lazy-Image** drives **ChatGPT** through an invisible instance of your default browser (Chrome or Edge) via the **Chrome DevTools Protocol (CDP)**, generates the image according to your prompt and aspect ratio, saves it inside your After Effects project folder, and **automatically places it onto your active composition timeline at the current playhead position.**
 
-> **Stay inside After Effects.** A browser window appears only once, when you first log in. After that, Chrome is started invisibly only while an image is being generated and closes again as soon as it's done — nothing keeps running in the background.
+> **Stay inside After Effects.** A browser window appears only once, when you first log in. After that, the browser is started invisibly only while an image is being generated and closes again as soon as it's done — nothing keeps running in the background.
 
 ---
 
 ## ✨ Key Features
 
 - 🔑 **No API Key Required**: Works directly with your ChatGPT (Free / Plus / Pro) account.
-- 🙈 **Invisible & On-Demand**: No browser window, no taskbar button, no background process — Chrome runs hidden only during a generation, then exits.
-- 🚫 **No Chrome Extension**: Connects to Chrome directly via CDP — zero extension setup, zero friction.
-- 🔐 **One-Time Login**: Log in to ChatGPT once in a normal browser window — your session is saved in a dedicated Chrome profile and the window closes by itself.
+- 🙈 **Invisible & On-Demand**: No browser window, no taskbar button, no background process — the browser runs hidden only during a generation, then exits.
+- 🌐 **Your Default Browser**: Uses whichever browser Windows is set to — Chrome, Edge, Brave or Vivaldi (falls back to Chrome, then Edge, for non-Chromium browsers like Firefox).
+- 🚫 **No Browser Extension**: Controls the browser directly via CDP — zero extension setup, zero friction.
+- 🔐 **One-Time Login**: Log in to ChatGPT once in a normal browser window — your session is saved in a dedicated Lazy-Image profile and the window closes by itself.
 - ⏹️ **Cancelable**: Stop a running generation at any time from the panel.
 - ⏱️ **Auto-Import to Timeline**: Automatically imports generated images into the project bin and adds them as layers at your current timeline playhead (`comp.time`).
 - 📂 **Smart Project Organization**: Automatically creates a `chatgptimages` folder next to your open `.aep` project file and saves every image there.
@@ -56,7 +58,7 @@ Instead of paying for expensive API credits or juggling between browser tabs and
 
 ```mermaid
 graph LR
-    A["AE Panel (CEP)"] -- "spawn per generation<br/>(hidden window)" --> B["Chrome<br/>dedicated profile"]
+    A["AE Panel (CEP)"] -- "spawn per generation<br/>(hidden window)" --> B["Default browser<br/>(Chrome / Edge)<br/>dedicated profile"]
     A -- "CDP WebSocket" --> B
     B -- "types prompt, waits" --> C["ChatGPT Web Session"]
     C -- "Generated Image" --> B
@@ -67,7 +69,7 @@ graph LR
 ```
 
 1. **CEP Panel (`client/`)**: Embedded Chromium & Node.js environment inside After Effects.
-2. **Browser Bridge (`client/js/browser-bridge.js`)**: For each generation it starts Chrome with a hidden window on the dedicated Lazy-Image profile, types the prompt into ChatGPT, waits for the finished image, downloads it, and closes Chrome again. For the one-time login it opens a normal, visible window instead — all without any Chrome Extension.
+2. **Browser Bridge (`client/js/browser-bridge.js`)**: For each generation it starts your default browser (Chrome or Edge) with a hidden window on a dedicated Lazy-Image profile, types the prompt into ChatGPT, waits for the finished image, downloads it, and closes the browser again. For the one-time login it opens a normal, visible window instead — all without any browser extension.
 3. **ExtendScript Engine (`host/`)**: Automates After Effects project file imports and timeline layer insertion.
 
 ---
@@ -76,7 +78,7 @@ graph LR
 
 ### Prerequisites
 - **Adobe After Effects**: CC 2019 to 2026 (Windows)
-- **Google Chrome**: Installed on your system
+- **Google Chrome or Microsoft Edge**: Lazy-Image uses your Windows default browser if it's Chromium-based (Chrome, Edge, Brave, Vivaldi); otherwise it uses Chrome, or Edge, which ships with Windows
 
 ---
 
@@ -97,7 +99,7 @@ graph LR
 1. Open **Adobe After Effects**.
 2. Go to top menu: **Window** > **Extensions** > **Lazy-Image — After Effects**.
 3. Click the **"🌐 Login to ChatGPT"** button in the panel header.
-4. A Chrome window opens with ChatGPT — **log in with your account** (you only need to do this once).
+4. A window of your default browser opens with ChatGPT — **log in with your account** (you only need to do this once).
 5. As soon as you're logged in, the window closes by itself and the panel shows a green **Logged in** badge.
 
 ---
@@ -118,7 +120,7 @@ graph LR
 ```
 LazyImageGeneration/
 ├── assets/
-│   └── preview.png              # Extension UI preview screenshot
+│   └── preview-v2.png           # Extension UI preview screenshot
 ├── CSXS/
 │   └── manifest.xml             # Adobe CEP extension manifest
 ├── client/
@@ -126,7 +128,7 @@ LazyImageGeneration/
 │   │   └── style.css            # Dark theme UI styling
 │   ├── js/
 │   │   ├── CSInterface.js       # Adobe CEP ExtendScript bridge
-│   │   ├── browser-bridge.js    # CDP-based Chrome automation (replaces Chrome Extension)
+│   │   ├── browser-bridge.js    # CDP browser automation (replaces the Chrome Extension)
 │   │   ├── main.js              # Main controller & UI logic
 │   │   └── utils/
 │   │       └── storage.js       # Persistent settings manager
@@ -145,14 +147,14 @@ LazyImageGeneration/
 <summary><b>Why does the status say "Login required"?</b></summary>
 
 - You haven't logged in yet, or your ChatGPT session expired.
-- Click the **"🌐 Login to ChatGPT"** button — a Chrome window opens where you can log in. It closes by itself once you're done.
-- Make sure Google Chrome is installed (Microsoft Edge is used as a fallback).
+- Click the **"🌐 Login to ChatGPT"** button — a window of your default browser opens where you can log in. It closes by itself once you're done.
+- If you change your default browser (e.g. from Chrome to Edge), log in once more — each browser keeps its own Lazy-Image session.
 </details>
 
 <details>
-<summary><b>Does Chrome keep running in the background?</b></summary>
+<summary><b>Does the browser keep running in the background?</b></summary>
 
-No. Chrome is started only when you click **Generate**, runs with a hidden window (no taskbar button, it doesn't take focus from After Effects), and is closed as soon as the image is downloaded — or when you press **✕ Cancel** or close the panel.
+No. The browser is started only when you click **Generate**, runs with a hidden window (no taskbar button, it doesn't take focus from After Effects), and is closed as soon as the image is downloaded — or when you press **✕ Cancel** or close the panel.
 </details>
 
 <details>
@@ -175,9 +177,9 @@ Yes! Lazy-Image fully supports UTF-8 Unicode. You can write prompts in বাং
 </details>
 
 <details>
-<summary><b>Does this interfere with my normal Chrome browsing?</b></summary>
+<summary><b>Does this interfere with my normal browsing?</b></summary>
 
-No! Lazy-Image uses a **separate Chrome profile** stored at `%APPDATA%\LazyImage\ChromeProfile`. Your regular Chrome browser, bookmarks, history, and extensions remain completely unaffected.
+No! Lazy-Image uses a **separate profile** of your browser, stored in `%APPDATA%\LazyImage` (e.g. `EdgeProfile` or `ChromeProfile`). Your regular browser, bookmarks, history, logins, and extensions remain completely unaffected — which is also why you log in to ChatGPT once inside Lazy-Image's own window.
 </details>
 
 ---

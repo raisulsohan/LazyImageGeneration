@@ -1,7 +1,8 @@
 // ============================================================
 // Lazy-Image: Browser Bridge
 // Drives ChatGPT through the Chrome DevTools Protocol (CDP) using a
-// dedicated Chrome profile. Chrome is started only for a login or for a
+// dedicated profile of the Windows default browser (Chrome, Edge, …).
+// The browser is started only for a login or for a
 // single generation and is closed again right afterwards. During a
 // generation its window is never shown (no taskbar button, no focus
 // change). Zero npm dependencies.
@@ -18,7 +19,7 @@ const path = require('path');
 const os = require('os');
 
 const APP_DIR = path.join(os.homedir(), 'AppData', 'Roaming', 'LazyImage');
-const AUTH_MARKER = path.join(APP_DIR, '.authenticated');
+const LEGACY_AUTH_MARKER = path.join(APP_DIR, '.authenticated');   // pre-2.0 marker, Chrome only
 const CHATGPT_URL = 'https://chatgpt.com/';
 const LOGIN_URL = 'https://chatgpt.com/auth/login';
 const CHATGPT_PAGE = /^https:\/\/(?:[a-z0-9-]+\.)*chatgpt\.com\//i;
@@ -70,12 +71,12 @@ class CdpConnection {
     }
 
     send(method, params, timeoutMs) {
-        if (this.closed) return Promise.reject(new Error('Connection to Chrome was closed'));
+        if (this.closed) return Promise.reject(new Error('Connection to the browser was closed'));
         const id = ++this.nextId;
         return new Promise((resolve, reject) => {
             const timer = setTimeout(() => {
                 delete this.pending[id];
-                reject(bridgeError('TIMEOUT', 'Chrome did not answer (' + method + ')'));
+                reject(bridgeError('TIMEOUT', 'The browser did not answer (' + method + ')'));
             }, timeoutMs || 30000);
             this.pending[id] = { resolve, reject, timer };
             this._write(0x1, Buffer.from(JSON.stringify({ id, method, params: params || {} }), 'utf8'));
@@ -96,7 +97,7 @@ class CdpConnection {
         this.pending = {};
         Object.keys(pending).forEach(id => {
             clearTimeout(pending[id].timer);
-            pending[id].reject(new Error('Connection to Chrome was closed'));
+            pending[id].reject(new Error('Connection to the browser was closed'));
         });
     }
 
@@ -188,7 +189,7 @@ class CdpConnection {
         if (!waiter) return;
         delete this.pending[msg.id];
         clearTimeout(waiter.timer);
-        if (msg.error) waiter.reject(new Error(msg.error.message || 'Chrome returned an error'));
+        if (msg.error) waiter.reject(new Error(msg.error.message || 'The browser returned an error'));
         else waiter.resolve(msg.result);
     }
 }
@@ -208,7 +209,7 @@ function openCdp(wsUrl) {
             reject(err);
         };
 
-        socket.setTimeout(10000, () => fail(new Error('Timed out connecting to Chrome')));
+        socket.setTimeout(10000, () => fail(new Error('Timed out connecting to the browser')));
         socket.on('error', fail);
         socket.on('connect', () => {
             socket.write([
@@ -227,7 +228,7 @@ function openCdp(wsUrl) {
             if (end === -1) return;
             socket.removeListener('data', onData);
             const status = head.slice(0, end).toString().split('\r\n')[0];
-            if (!/ 101 /.test(status)) return fail(new Error('Chrome refused the DevTools connection: ' + status));
+            if (!/ 101 /.test(status)) return fail(new Error('The browser refused the DevTools connection: ' + status));
             settled = true;
             socket.removeListener('error', fail);
             socket.setTimeout(0);
@@ -279,34 +280,63 @@ function pressKey(conn, key, keyCode, modifiers, text) {
 // BROWSER PROCESS
 // ============================================================
 
-let cachedBrowser = null;
+// Chromium-based browsers that speak the DevTools protocol, keyed by executable name.
+const CHROMIUM_BROWSERS = {
+    'chrome.exe': { id: 'chrome', name: 'Chrome' },
+    'msedge.exe': { id: 'edge', name: 'Edge' },
+    'brave.exe': { id: 'brave', name: 'Brave' },
+    'vivaldi.exe': { id: 'vivaldi', name: 'Vivaldi' },
+    'chromium.exe': { id: 'chromium', name: 'Chromium' }
+};
 
+let browserCache = { at: 0, value: null };
+
+function regValue(key, valueName) {
+    try {
+        const out = cp.execFileSync('reg', ['query', key].concat(valueName ? ['/v', valueName] : ['/ve']),
+            { encoding: 'utf8', timeout: 5000, windowsHide: true, stdio: ['ignore', 'pipe', 'ignore'] });
+        const match = out.match(/REG_(?:EXPAND_)?SZ\s+(.*)/);
+        return match ? match[1].trim() : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+function exeFromCommand(command) {
+    const match = /^\s*"([^"]+\.exe)"/i.exec(command || '') || /^\s*(\S+\.exe)/i.exec(command || '');
+    return match && fs.existsSync(match[1]) ? match[1] : null;
+}
+
+function describeBrowser(exe) {
+    const info = exe && CHROMIUM_BROWSERS[path.basename(exe).toLowerCase()];
+    return info ? { exe: exe, id: info.id, name: info.name, profileDir: path.join(APP_DIR, info.name + 'Profile') } : null;
+}
+
+// The Windows default browser when it is Chromium-based (Firefox has no DevTools protocol
+// support); otherwise Chrome, then Edge, which ships with Windows.
 function findBrowser() {
-    if (cachedBrowser && fs.existsSync(cachedBrowser.exe)) return cachedBrowser;
-    const pf = process.env['PROGRAMFILES'] || 'C:\\Program Files';
-    const pf86 = process.env['PROGRAMFILES(X86)'] || 'C:\\Program Files (x86)';
-    const local = process.env['LOCALAPPDATA'] || '';
-    const chrome = [
-        path.join(pf, 'Google', 'Chrome', 'Application', 'chrome.exe'),
-        path.join(pf86, 'Google', 'Chrome', 'Application', 'chrome.exe'),
-        path.join(local, 'Google', 'Chrome', 'Application', 'chrome.exe')
-    ];
-    const edge = [
-        path.join(pf86, 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
-        path.join(pf, 'Microsoft', 'Edge', 'Application', 'msedge.exe')
-    ];
+    if (Date.now() - browserCache.at < 5000) return browserCache.value;
 
-    let exe = chrome.find(p => fs.existsSync(p)) || registryAppPath('chrome.exe');
-    if (exe) {
-        cachedBrowser = { exe: exe, name: 'Chrome', profileDir: path.join(APP_DIR, 'ChromeProfile') };
-        return cachedBrowser;
+    const choice = 'HKCU\\Software\\Microsoft\\Windows\\Shell\\Associations\\UrlAssociations\\https';
+    const progId = regValue(choice + '\\UserChoiceLatest', 'ProgId') || regValue(choice + '\\UserChoice', 'ProgId');
+    let browser = progId ? describeBrowser(exeFromCommand(regValue('HKCR\\' + progId + '\\shell\\open\\command'))) : null;
+
+    if (!browser) {
+        const pf = process.env['PROGRAMFILES'] || 'C:\\Program Files';
+        const pf86 = process.env['PROGRAMFILES(X86)'] || 'C:\\Program Files (x86)';
+        const local = process.env['LOCALAPPDATA'] || '';
+        const fallbacks = [
+            path.join(pf, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+            path.join(pf86, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+            path.join(local, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+            path.join(pf86, 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
+            path.join(pf, 'Microsoft', 'Edge', 'Application', 'msedge.exe')
+        ];
+        browser = describeBrowser(fallbacks.find(p => fs.existsSync(p)) || registryAppPath('chrome.exe') || registryAppPath('msedge.exe'));
     }
-    exe = edge.find(p => fs.existsSync(p));
-    if (exe) {
-        cachedBrowser = { exe: exe, name: 'Edge', profileDir: path.join(APP_DIR, 'EdgeProfile') };
-        return cachedBrowser;
-    }
-    return null;
+
+    browserCache = { at: Date.now(), value: browser };
+    return browser;
 }
 
 function registryAppPath(exeName) {
@@ -376,11 +406,11 @@ function profileInUse(profileDir) {
     try { fs.unlinkSync(lock); return false; } catch (e) { return true; }
 }
 
-// Closes Chrome instances left running on our profile (a crash, or an older Lazy-Image version).
-async function killProfileBrowsers(profileDir) {
+// Closes browser instances left running on our profile (a crash, or an older Lazy-Image version).
+async function killProfileBrowsers(profileDir, exeName) {
     const needle = profileDir.replace(/'/g, "''");
     await runPowerShell(
-        "Get-CimInstance Win32_Process -Filter \"Name='chrome.exe' OR Name='msedge.exe'\" | " +
+        "Get-CimInstance Win32_Process -Filter \"Name='" + exeName.replace(/'/g, "''") + "'\" | " +
         "Where-Object { $_.CommandLine -and $_.CommandLine.IndexOf('" + needle + "', [StringComparison]::OrdinalIgnoreCase) -ge 0 } | " +
         "ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }");
     for (let i = 0; i < 20 && profileInUse(profileDir); i++) await sleep(250);
@@ -388,11 +418,11 @@ async function killProfileBrowsers(profileDir) {
 
 async function launchBrowser(visible, url) {
     const browser = findBrowser();
-    if (!browser) throw bridgeError('BROWSER_NOT_FOUND', 'Google Chrome was not found. Please install Google Chrome.');
+    if (!browser) throw bridgeError('BROWSER_NOT_FOUND', 'No supported browser was found. Please install Google Chrome or Microsoft Edge.');
     if (session && !session.exited) await closeBrowser(session);
 
     fs.mkdirSync(browser.profileDir, { recursive: true });
-    if (profileInUse(browser.profileDir)) await killProfileBrowsers(browser.profileDir);
+    if (profileInUse(browser.profileDir)) await killProfileBrowsers(browser.profileDir, path.basename(browser.exe));
     const portFile = path.join(browser.profileDir, 'DevToolsActivePort');
     try { fs.unlinkSync(portFile); } catch (e) {}
 
@@ -412,30 +442,39 @@ async function launchBrowser(visible, url) {
 
     if (!visible) await lockForegroundWhileLaunching(15000);
 
-    // windowsHide starts Chrome with SW_HIDE: no window and no taskbar button, while the page
-    // itself keeps rendering as "visible".
+    checkCancelled();
+
+    // windowsHide starts the browser with SW_HIDE: no window and no taskbar button, while the
+    // page itself keeps rendering as "visible".
     const proc = cp.spawn(browser.exe, args, { detached: true, stdio: 'ignore', windowsHide: !visible });
-    const s = { proc: proc, visible: visible, port: 0, browserPath: '', exited: false, closing: null };
+    const s = { proc: proc, browser: browser, visible: visible, port: 0, browserPath: '', exited: false, closing: null };
     proc.on('exit', () => { s.exited = true; });
     proc.on('error', () => { s.exited = true; });
     proc.unref();
     session = s;
 
-    const deadline = Date.now() + LAUNCH_TIMEOUT_MS;
-    while (Date.now() < deadline) {
-        checkCancelled();
-        if (s.exited) throw bridgeError('LAUNCH_FAILED', browser.name + ' closed right after starting. Please try again.');
-        try {
-            const lines = fs.readFileSync(portFile, 'utf8').split(/\r?\n/);
-            if (lines[0] && lines[1]) {
-                s.port = parseInt(lines[0], 10);
-                s.browserPath = lines[1].trim();
-                return s;
-            }
-        } catch (e) {}
-        await sleep(200);
+    try {
+        const deadline = Date.now() + LAUNCH_TIMEOUT_MS;
+        while (Date.now() < deadline) {
+            checkCancelled();
+            if (s.exited) throw bridgeError('LAUNCH_FAILED', browser.name + ' closed right after starting. Please try again.');
+            try {
+                const lines = fs.readFileSync(portFile, 'utf8').split(/\r?\n/);
+                if (lines[0] && lines[1]) {
+                    s.port = parseInt(lines[0], 10);
+                    s.browserPath = lines[1].trim();
+                    return s;
+                }
+            } catch (e) {}
+            await sleep(200);
+        }
+        throw bridgeError('LAUNCH_FAILED', browser.name + ' did not start in time. Please try again.');
+    } catch (e) {
+        // Callers never get a handle to a half-started browser, so it must not outlive this call.
+        forceKill(s);
+        if (session === s) session = null;
+        throw e;
     }
-    throw bridgeError('LAUNCH_FAILED', browser.name + ' did not start in time. Please try again.');
 }
 
 function closeBrowser(s) {
@@ -472,7 +511,7 @@ function checkCancelled() {
 
 function checkAlive(s) {
     checkCancelled();
-    if (s.exited) throw bridgeError('BROWSER_CLOSED', 'Chrome closed unexpectedly. Please try again.');
+    if (s.exited) throw bridgeError('BROWSER_CLOSED', 'The browser closed unexpectedly. Please try again.');
 }
 
 async function connectToChatGPT(s) {
@@ -811,7 +850,7 @@ async function generate(prompt, aspectRatio, onProgress) {
         conn = await connectToChatGPT(s);
         progress('Loading ChatGPT…');
         await waitForChatGPT(conn, s);
-        markAuthenticated();
+        markAuthenticated(s.browser);
 
         progress('Sending prompt…');
         await sendPrompt(conn, s, buildPrompt(prompt, aspectRatio));
@@ -828,7 +867,7 @@ async function generate(prompt, aspectRatio, onProgress) {
         };
     } catch (e) {
         if (cancelRequested) throw bridgeError('CANCELLED', 'Generation cancelled.');
-        if (e.code === 'NOT_LOGGED_IN') clearAuthenticated();
+        if (e.code === 'NOT_LOGGED_IN') clearAuthenticated(s.browser);
         throw e;
     } finally {
         if (conn) conn.close();
@@ -845,11 +884,11 @@ async function checkLoginHidden() {
         s = await launchBrowser(false, CHATGPT_URL);
         conn = await connectToChatGPT(s);
         await waitForChatGPT(conn, s);
-        markAuthenticated();
+        markAuthenticated(s.browser);
         return true;
     } catch (e) {
         if (e.code === 'NOT_LOGGED_IN') {
-            clearAuthenticated();
+            clearAuthenticated(s.browser);
             return false;
         }
         throw e;
@@ -926,7 +965,7 @@ async function login(onProgress) {
             const state = await probeLoginWindow(s);
             if (state === 'logged_out') sawLoggedOut = true;
             if (state === 'logged_in') {
-                markAuthenticated();
+                markAuthenticated(s.browser);
                 if (sawLoggedOut) {
                     await sleep(1500);
                     await closeBrowser(s);
@@ -941,6 +980,7 @@ async function login(onProgress) {
         }
 
         await closeBrowser(s);
+        checkCancelled();
         if (alreadyLoggedIn) return { loggedIn: true };
         progress('verifying');
         return { loggedIn: await checkLoginHidden() };
@@ -967,29 +1007,45 @@ function shutdown() {
 }
 
 function getStatus() {
+    const browser = findBrowser();
     return {
-        loggedIn: isAuthenticated(),
+        loggedIn: isAuthenticated(browser),
+        browserName: browser ? browser.name : null,
         busy: busy,
         browserOpen: !!(session && !session.exited),
         windowVisible: !!(session && !session.exited && session.visible)
     };
 }
 
-function markAuthenticated() {
+// Each browser profile has its own ChatGPT session, so the "logged in" marker is per browser.
+function authMarker(browser) {
+    return path.join(APP_DIR, '.authenticated-' + browser.id);
+}
+
+function markAuthenticated(browser) {
     try {
         fs.mkdirSync(APP_DIR, { recursive: true });
-        fs.writeFileSync(AUTH_MARKER, new Date().toISOString(), 'utf8');
+        fs.writeFileSync(authMarker(browser), new Date().toISOString(), 'utf8');
     } catch (e) {
         console.error('[BrowserBridge] Failed to write auth marker:', e);
     }
 }
 
-function clearAuthenticated() {
-    try { fs.unlinkSync(AUTH_MARKER); } catch (e) {}
+function clearAuthenticated(browser) {
+    try { fs.unlinkSync(authMarker(browser)); } catch (e) {}
+    if (browser.id === 'chrome') {
+        try { fs.unlinkSync(LEGACY_AUTH_MARKER); } catch (e) {}
+    }
 }
 
-function isAuthenticated() {
-    try { return fs.existsSync(AUTH_MARKER); } catch (e) { return false; }
+function isAuthenticated(browser) {
+    browser = browser || findBrowser();
+    if (!browser) return false;
+    try {
+        return fs.existsSync(authMarker(browser)) || (browser.id === 'chrome' && fs.existsSync(LEGACY_AUTH_MARKER));
+    } catch (e) {
+        return false;
+    }
 }
 
 window.BrowserBridge = {
