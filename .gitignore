@@ -1,4 +1,1 @@
 node_modules/
-
-# The signing key. Never commit this: anyone who has it can mint licenses.
-tools/keys/
