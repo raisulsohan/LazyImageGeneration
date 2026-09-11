@@ -556,6 +556,56 @@ textarea:focus {
     margin: 0;
 }
 
+/* The "bought directly" route, folded away so the common case stays a single field. */
+.activation-alt {
+    border-top: 1px solid var(--border-color);
+    padding-top: 12px;
+    margin-top: 2px;
+}
+
+.activation-alt summary {
+    cursor: pointer;
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    list-style: none;
+}
+
+.activation-alt summary::-webkit-details-marker {
+    display: none;
+}
+
+.activation-alt summary::before {
+    content: '▸ ';
+}
+
+.activation-alt[open] summary::before {
+    content: '▾ ';
+}
+
+.activation-alt summary:hover {
+    color: var(--accent-cyan);
+}
+
+.link-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    font-size: 11px;
+    color: var(--text-secondary);
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.link-btn:hover {
+    color: var(--accent-cyan);
+}
+
+.link-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
 .toast.visible {
     opacity: 1;
     transform: translate(-50%, 0);

@@ -2,7 +2,7 @@
 
 > **AI Image Generation directly inside Adobe After Effects and Premiere Pro using your existing ChatGPT account — No API keys, no Chrome Extension, no extra billing required!**
 
-Developed with ❤️ by **[Raisul Sohan](https://raisulsohan.com)** · **Version 2.3**
+Developed with ❤️ by **[Raisul Sohan](https://raisulsohan.com)** · **Version 2.4**
 
 ---
 
@@ -13,6 +13,13 @@ Developed with ❤️ by **[Raisul Sohan](https://raisulsohan.com)** · **Versio
 ---
 
 ## 🆕 What's New
+
+### 2.4
+
+- **Instant activation** — the paid build now checks keys against SupportKori, so a buyer is running within seconds of paying instead of waiting for a key to be issued by hand. Keys bought directly by email still work, verified offline as before.
+- **Two computers per key**, with a **Deactivate this computer** button so a licence can be moved to a new machine without asking for help.
+- **Refunds revoke themselves** — a refunded or disabled key stops working on the next launch.
+- **Works offline for two weeks** — the licence check runs once at startup, never on the hot path, so a dropped connection or an outage never interrupts someone mid-project.
 
 ### 2.3
 

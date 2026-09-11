@@ -13,7 +13,7 @@
         <header class="header">
             <div class="logo-title">
                 <h1>Lazy-Image <span class="app-tag" id="hostTag">After Effects</span></h1>
-                <span class="developer-credit">v2.3 · Developed By Raisul Sohan</span>
+                <span class="developer-credit">v2.4 · Developed By Raisul Sohan</span>
             </div>
             <div class="connection-status">
                 <button id="testBtn" class="login-btn subtle" title="Check the ChatGPT connection without generating an image">🔍 Test</button>
@@ -76,6 +76,8 @@
                 <div class="footer">
                     <span class="footer-info">🔗 Auto-timeline import active</span>
                     <span class="footer-meta"></span>
+                    <!-- Paid build only: frees this machine's seat so the key can move elsewhere. -->
+                    <button id="deactivateBtn" class="link-btn" hidden>Deactivate this computer</button>
                 </div>
             </div>
         </main>
@@ -88,18 +90,24 @@
         <div class="activation-card">
             <h2>Activate Lazy-Image</h2>
             <p class="activation-intro">
-                Email the <b>Machine ID</b> below to <b>lettertosohan@gmail.com</b>
-                and you'll receive an activation key for this computer.
+                Paste the key from your purchase email. One key works on two computers.
             </p>
-            <label class="activation-label">Machine ID</label>
-            <div class="machine-row">
-                <code id="machineId">…</code>
-                <button id="copyMachineBtn" class="secondary-btn">Copy</button>
-            </div>
             <label class="activation-label" for="licenseKeyInput">Activation key</label>
-            <textarea id="licenseKeyInput" class="license-input" placeholder="Paste the activation key you received"></textarea>
+            <textarea id="licenseKeyInput" class="license-input" placeholder="XXXXX-XXXXX-XXXXX-XXXXX"></textarea>
             <button id="activateBtn" class="generate-btn">Activate</button>
             <p id="activationError" class="activation-error" hidden></p>
+
+            <details class="activation-alt">
+                <summary>Bought directly from Raisul?</summary>
+                <p class="activation-intro">
+                    Email this <b>Machine ID</b> to <b>lettertosohan@gmail.com</b> and you'll
+                    get a key made for this computer.
+                </p>
+                <div class="machine-row">
+                    <code id="machineId">…</code>
+                    <button id="copyMachineBtn" class="secondary-btn">Copy</button>
+                </div>
+            </details>
         </div>
     </div>
 

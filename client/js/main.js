@@ -28,6 +28,9 @@ document.addEventListener('DOMContentLoaded', () => {
     refreshLicenseUI();
     updateConnectionUI();
     refreshImageFolderWatch();
+    // The stored result is trusted for the panel to open; the real check happens behind it,
+    // so a refunded or disabled key stops working from the next launch.
+    if (LICENSING) window.LazyLicense.refresh().then(refreshLicenseUI, () => {});
 });
 
 // The open project can change while the panel stays open; re-check whenever the panel is used.
@@ -84,6 +87,8 @@ function initializeUI() {
     if (activateBtn) activateBtn.addEventListener('click', handleActivate);
     const copyMachineBtn = document.getElementById('copyMachineBtn');
     if (copyMachineBtn) copyMachineBtn.addEventListener('click', handleCopyMachineId);
+    const deactivateBtn = document.getElementById('deactivateBtn');
+    if (deactivateBtn) deactivateBtn.addEventListener('click', handleDeactivate);
 
     // Copy button
     const copyBtn = document.getElementById('copyBtn');
@@ -132,7 +137,9 @@ async function handleLogin() {
 }
 
 // === ACTIVATION (paid build only) ===
-// Shows the activation screen until a key signed for this machine is stored.
+// Shows the activation screen until a valid key is stored. Deliberately synchronous:
+// it reads the result of the last network check rather than making one, so opening the
+// panel and pressing Generate never wait on supportkori.com.
 function refreshLicenseUI() {
     const overlay = document.getElementById('activationOverlay');
     if (!overlay) return true;
@@ -140,25 +147,79 @@ function refreshLicenseUI() {
         overlay.hidden = true;
         return true;
     }
-    const status = window.LazyLicense.status();
+    const status = window.LazyLicense.state();
     const idEl = document.getElementById('machineId');
     if (idEl) idEl.textContent = status.machineId;
+
+    // A key that was working and has since been refused: say why instead of showing a blank form.
+    const error = document.getElementById('activationError');
+    if (error && status.reason) {
+        error.textContent = status.reason;
+        error.hidden = false;
+    }
+
+    const deactivateBtn = document.getElementById('deactivateBtn');
+    if (deactivateBtn) deactivateBtn.hidden = !status.activated || status.kind !== 'skori';
+
     overlay.hidden = status.activated;
     return status.activated;
 }
 
-function handleActivate() {
+async function handleActivate() {
     const input = document.getElementById('licenseKeyInput');
     const error = document.getElementById('activationError');
-    const result = window.LazyLicense.activate(input ? input.value : '');
-    if (result.valid) {
-        if (error) error.hidden = true;
-        if (input) input.value = '';
-        refreshLicenseUI();
-        showStatus('✅ Activated — thank you! Log in to ChatGPT to get started.', 'success');
-    } else if (error) {
-        error.textContent = result.reason;
-        error.hidden = false;
+    const button = document.getElementById('activateBtn');
+    if (button && button.disabled) return;
+
+    if (button) {
+        button.disabled = true;
+        button.textContent = 'Checking…';
+    }
+    try {
+        const result = await window.LazyLicense.activate(input ? input.value : '');
+        if (result.valid) {
+            if (error) error.hidden = true;
+            if (input) input.value = '';
+            refreshLicenseUI();
+            // Someone reinstalling already has a ChatGPT login; don't send them to do it again.
+            let loggedIn = false;
+            try { loggedIn = !!BrowserBridge.getStatus().loggedIn; } catch (e) {}
+            showStatus(loggedIn
+                ? '✅ Activated — thank you! You are ready to generate.'
+                : '✅ Activated — thank you! Click "Login to ChatGPT" to get started.', 'success');
+        } else if (error) {
+            error.textContent = result.reason;
+            error.hidden = false;
+        }
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.textContent = 'Activate';
+        }
+    }
+}
+
+// Hands this computer's seat back so the buyer can activate somewhere else.
+async function handleDeactivate() {
+    const button = document.getElementById('deactivateBtn');
+    if (button && button.disabled) return;
+    if (button) {
+        button.disabled = true;
+        button.textContent = 'Releasing…';
+    }
+    try {
+        const result = await window.LazyLicense.deactivate();
+        if (result.ok) {
+            refreshLicenseUI();
+            showStatus('This computer has been released. Your key is free to use on another machine.', 'warning');
+        } else {
+            showStatus('❌ ' + result.reason, 'error');
+        }
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.textContent = 'Deactivate this computer';
+        }
     }
 }
 
