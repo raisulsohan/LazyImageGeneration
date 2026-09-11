@@ -2,7 +2,7 @@
 
 > **AI Image Generation directly inside Adobe After Effects and Premiere Pro using your existing ChatGPT account — No API keys, no Chrome Extension, no extra billing required!**
 
-Developed with ❤️ by **[Raisul Sohan](https://raisulsohan.com)** · **Version 2.2**
+Developed with ❤️ by **[Raisul Sohan](https://raisulsohan.com)** · **Version 2.3**
 
 ---
 
@@ -13,6 +13,13 @@ Developed with ❤️ by **[Raisul Sohan](https://raisulsohan.com)** · **Versio
 ---
 
 ## 🆕 What's New
+
+### 2.3
+
+- **Says what actually went wrong** — a usage limit, a ChatGPT error, or a declined prompt is reported immediately in ChatGPT's own words, instead of waiting out a six-minute timeout.
+- **Survives ChatGPT UI changes better** — every element is looked up through a chain of fallback selectors, and if none match, the panel says ChatGPT has changed and an update is needed rather than failing vaguely.
+- **🔍 Test button** — checks browser, login, chat box and send button in a few seconds without generating anything.
+- **Automatic retry** — a transient browser or ChatGPT error is retried once before giving up.
 
 ### 2.2
 
@@ -55,6 +62,8 @@ Instead of paying for expensive API credits or juggling between browser tabs and
 - 🚫 **No Browser Extension**: Controls the browser directly via CDP — zero extension setup, zero friction.
 - 🔐 **One-Time Login**: Log in to ChatGPT once in a normal browser window — your session is saved in a dedicated Lazy-Image profile and the window closes by itself.
 - ⏹️ **Cancelable**: Stop a running generation at any time from the panel.
+- 🔍 **Test Button**: Checks browser, login, chat box and send button in a few seconds without generating anything.
+- 💬 **Plain Failures**: When ChatGPT hits a usage limit, errors out, or declines a prompt, the panel says so immediately with ChatGPT's own wording instead of waiting out a timeout. Transient errors are retried once automatically.
 - ⏱️ **Auto-Import to Timeline**: Imports every generated image into a `ChatGptImages` folder (After Effects) or bin (Premiere Pro) and places it at the current playhead — as a new layer in After Effects, or on a free video track above your footage in Premiere Pro.
 - 📂 **Smart Project Organization**: Automatically creates a `chatgptimages` folder next to your open `.aep` or `.prproj` project file and saves every image there.
 - 🗑️ **Removal Tip**: If an image is deleted from that folder, the panel shows a short "Image removed" notification.

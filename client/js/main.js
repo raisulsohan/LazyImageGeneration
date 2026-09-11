@@ -15,6 +15,7 @@ const HOST_NAME = IS_PREMIERE ? 'Premiere Pro' : 'After Effects';
 
 let isGenerating = false;
 let isLoggingIn = false;
+let isTesting = false;
 let imageFolderWatcher = null;
 let watchedImageFolder = null;
 
@@ -68,6 +69,12 @@ function initializeUI() {
         loginBtn.addEventListener('click', handleLogin);
     }
 
+    // Test button
+    const testBtn = document.getElementById('testBtn');
+    if (testBtn) {
+        testBtn.addEventListener('click', handleTest);
+    }
+
     // Copy button
     const copyBtn = document.getElementById('copyBtn');
     if (copyBtn) {
@@ -114,9 +121,40 @@ async function handleLogin() {
     }
 }
 
+// === HANDLE TEST ===
+// Checks browser, login and ChatGPT's chat box without generating anything.
+async function handleTest() {
+    if (isGenerating || isLoggingIn || isTesting) return;
+    isTesting = true;
+    updateConnectionUI();
+    showStatus('🔍 Testing the ChatGPT connection…', 'loading');
+
+    try {
+        const report = await BrowserBridge.diagnose();
+        const parts = [
+            'Browser: ' + (report.browserName || 'not found'),
+            'Login: ' + (report.loggedIn ? 'OK' : 'not logged in'),
+            'Chat box: ' + (report.composer ? 'found' : 'not found'),
+            'Send button: ' + (report.send ? 'found' : 'not found')
+        ];
+        const ok = report.loggedIn && report.composer && report.send;
+        showStatus((ok ? '✅ Everything works — ' : '⚠️ ') + parts.join(' · ') +
+            (report.error && !ok ? ' — ' + report.error : ''), ok ? 'success' : 'warning');
+    } catch (e) {
+        showStatus('❌ ' + e.message, 'error');
+    } finally {
+        isTesting = false;
+        updateConnectionUI();
+    }
+}
+
 // === HANDLE GENERATE ===
 async function handleGenerate() {
     if (isGenerating) return;
+    if (isTesting) {
+        showStatus('Wait for the connection test to finish.', 'warning');
+        return;
+    }
     if (isLoggingIn) {
         showStatus('Finish the ChatGPT login (or close the browser window) first.', 'warning');
         return;
@@ -168,8 +206,9 @@ async function handleGenerate() {
         clearInterval(ticker);
         if (e.code === 'CANCELLED') {
             showStatus('Generation cancelled.', 'warning');
-        } else if (e.code === 'NOT_LOGGED_IN' || e.code === 'CHALLENGE' || e.code === 'DIALOG') {
-            showStatus('⚠️ ' + e.message, 'error');
+        } else if (NEEDS_YOU.indexOf(e.code) !== -1) {
+            // Nothing is broken — ChatGPT needs something from the user, or has changed.
+            showStatus('⚠️ ' + e.message, 'warning');
         } else {
             showStatus('❌ ' + e.message, 'error');
         }
@@ -181,6 +220,9 @@ async function handleGenerate() {
         updateConnectionUI();
     }
 }
+
+// Failures the user can act on, shown as a warning rather than a red error.
+const NEEDS_YOU = ['NOT_LOGGED_IN', 'CHALLENGE', 'DIALOG', 'RATE_LIMIT', 'CHATGPT_BLOCKED', 'UI_CHANGED', 'NO_IMAGE'];
 
 // === PROGRESS ESTIMATE ===
 // ChatGPT doesn't report real progress, so the percentage is an estimate: fixed steps while
@@ -542,7 +584,13 @@ function updateConnectionUI() {
     if (!badge || !loginBtn) return;
 
     const status = BrowserBridge.getStatus();
-    loginBtn.disabled = isLoggingIn || isGenerating;
+    const busy = isLoggingIn || isGenerating || isTesting;
+    loginBtn.disabled = busy;
+    const testBtn = document.getElementById('testBtn');
+    if (testBtn) {
+        testBtn.disabled = busy;
+        testBtn.textContent = isTesting ? '⏳ Testing...' : '🔍 Test';
+    }
 
     if (isLoggingIn) {
         badge.textContent = 'Browser open';

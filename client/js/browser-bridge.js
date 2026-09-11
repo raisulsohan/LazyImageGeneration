@@ -28,6 +28,7 @@ const AUTH_PAGE = /^https:\/\/(?:auth\.openai\.com|auth0\.openai\.com|accounts\.
 const LAUNCH_TIMEOUT_MS = 20000;
 const READY_TIMEOUT_MS = 60000;
 const CHALLENGE_TIMEOUT_MS = 30000;
+const UI_CHANGED_GRACE_MS = 20000;
 const GENERATION_TIMEOUT_MS = 6 * 60 * 1000;
 const TEXT_ONLY_REPLY_MS = 45000;
 const LOGIN_TIMEOUT_MS = 15 * 60 * 1000;
@@ -36,10 +37,27 @@ let session = null;        // the one browser this panel owns: { proc, visible, 
 let busy = false;
 let cancelRequested = false;
 
+const UI_CHANGED_MESSAGE = 'Lazy-Image could not find ChatGPT\'s chat box. ChatGPT has most likely changed its website — please check for a Lazy-Image update.';
+
+// Failures worth one silent second attempt. Anything needing the user (login, verification,
+// a usage limit, a refusal) is never retried, and neither is a timeout: the image may still
+// be on its way, and a second 6-minute wait helps nobody.
+const RETRYABLE = { LAUNCH_FAILED: true, BROWSER_CLOSED: true, CHATGPT_ERROR: true };
+
 function bridgeError(code, message) {
     const err = new Error(message);
     err.code = code;
     return err;
+}
+
+function failureMessage(failure) {
+    if (failure.code === 'RATE_LIMIT') {
+        return 'ChatGPT has hit a usage limit: "' + failure.text + '" — wait for it to reset and try again.';
+    }
+    if (failure.code === 'CHATGPT_BLOCKED') {
+        return 'ChatGPT flagged this session: "' + failure.text + '" — click "Open ChatGPT", check the browser window, then try again.';
+    }
+    return 'ChatGPT reported an error: "' + failure.text + '"';
 }
 
 function sleep(ms) {
@@ -381,7 +399,9 @@ function lockForegroundWhileLaunching(lockMs) {
         "$fg = $tb.CreateType()",
         "[Console]::Out.WriteLine('locked:' + $fg::LockSetForegroundWindow(1))",
         "[Console]::Out.Flush()",
-        "Start-Sleep -Milliseconds " + lockMs,
+        // Windows lifts the lock the moment the user clicks or presses a key, so re-assert it
+        // for as long as the browser might still be starting up.
+        "for ($i = 0; $i -lt " + Math.ceil(lockMs / 500) + "; $i++) { [void]$fg::LockSetForegroundWindow(1); Start-Sleep -Milliseconds 500 }",
         "[void]$fg::LockSetForegroundWindow(2)"
     ].join('; ');
     return new Promise(resolve => {
@@ -536,6 +556,47 @@ async function connectToChatGPT(s) {
 // PAGE SCRIPTS (run inside chatgpt.com, passed via Function#toString)
 // ============================================================
 
+// ChatGPT's markup changes over time, so every hook is an ordered list and the first selector
+// that matches wins — one rename then costs nothing. diagnose() reports which ones resolved.
+const PAGE_HOOKS = {
+    composer: [
+        'div#prompt-textarea[contenteditable="true"]',
+        '#prompt-textarea[contenteditable="true"]',
+        'div[contenteditable="true"][id*="prompt"]',
+        'form div[contenteditable="true"]',
+        'textarea[name="prompt-textarea"]',
+        'form textarea'
+    ],
+    send: [
+        '#composer-submit-button[data-testid="send-button"]',
+        '[data-testid="send-button"]',
+        'button[aria-label="Send prompt"]',
+        'form button[type="submit"]'
+    ],
+    // Literal text ChatGPT shows when a request fails. These are distinctive enough that a normal
+    // reply will not contain them, and they are only ever matched outside the user's own messages.
+    failures: [
+        { pattern: 'reached our limit of messages', code: 'RATE_LIMIT' },
+        { pattern: '(reached|hit)[^.]{0,24}(image|picture)[^.]{0,24}limit', code: 'RATE_LIMIT' },
+        { pattern: 'limit (for|on) (generating |creating )?images', code: 'RATE_LIMIT' },
+        { pattern: 'unusual activity (has been )?detected', code: 'CHATGPT_BLOCKED' },
+        { pattern: 'error in message stream', code: 'CHATGPT_ERROR' },
+        { pattern: 'there was an error generating a response', code: 'CHATGPT_ERROR' },
+        { pattern: 'an error occurred while connecting to the websocket', code: 'CHATGPT_ERROR' },
+        { pattern: 'a network error occurred', code: 'CHATGPT_ERROR' },
+        { pattern: 'something went wrong', code: 'CHATGPT_ERROR' },
+        { pattern: 'conversation not found', code: 'CHATGPT_ERROR' }
+    ],
+    // A finished reply saying one of these will never produce an image, so stop waiting for one.
+    refusals: [
+        'can\'?t (create|generate|make) ',
+        'cannot (create|generate|make) ',
+        'unable to (create|generate|make) ',
+        'won\'?t be able to (create|generate)',
+        'i\'?m not able to (create|generate)'
+    ]
+};
+
 function pageSessionState() {
     return fetch('/api/auth/session', { credentials: 'include', cache: 'no-store' })
         .then(res => res.json())
@@ -543,7 +604,7 @@ function pageSessionState() {
         .catch(() => ({ known: false, loggedIn: false }));
 }
 
-function pageLoadState() {
+function pageLoadState(hooks) {
     const title = document.title || '';
     const text = document.body ? document.body.innerText.slice(0, 1500) : '';
     if (/just a moment|attention required/i.test(title) || /verify you are human|checking your browser|needs to review the security/i.test(text)) {
@@ -554,9 +615,20 @@ function pageLoadState() {
         .then(res => res.json())
         .then(json => {
             if (!json || !json.accessToken) return { state: 'logged_out' };
-            return { state: document.querySelector('div#prompt-textarea[contenteditable="true"]') ? 'ready' : 'loading' };
+            const composer = hooks.composer.map(s => document.querySelector(s)).find(Boolean);
+            return { state: composer ? 'ready' : 'no_composer' };
         })
         .catch(() => ({ state: 'loading' }));
+}
+
+function pageDiagnose(hooks) {
+    const pick = list => {
+        for (let i = 0; i < list.length; i++) {
+            if (document.querySelector(list[i])) return list[i];
+        }
+        return null;
+    };
+    return { composer: pick(hooks.composer), send: pick(hooks.send) };
 }
 
 function pageVisibleDialog() {
@@ -565,23 +637,22 @@ function pageVisibleDialog() {
     return dialog ? (dialog.innerText || '').trim().replace(/\s+/g, ' ').slice(0, 160) || 'dialog' : '';
 }
 
-function pageFocusComposer() {
-    const editor = document.querySelector('div#prompt-textarea[contenteditable="true"]');
+function pageFocusComposer(hooks) {
+    const editor = hooks.composer.map(s => document.querySelector(s)).find(Boolean);
     if (!editor) return false;
     editor.focus();
     document.execCommand('selectAll', false, null);  // the next insertText replaces any draft
     return true;
 }
 
-function pageComposerText() {
-    const editor = document.querySelector('div#prompt-textarea[contenteditable="true"]');
-    return editor ? editor.innerText : null;
+function pageComposerText(hooks) {
+    const editor = hooks.composer.map(s => document.querySelector(s)).find(Boolean);
+    if (!editor) return null;
+    return editor.tagName === 'TEXTAREA' ? editor.value : editor.innerText;
 }
 
-function pageClickSend() {
-    const button = document.querySelector('#composer-submit-button[data-testid="send-button"]') ||
-        document.querySelector('[data-testid="send-button"]') ||
-        document.querySelector('button[aria-label="Send prompt"]');
+function pageClickSend(hooks) {
+    const button = hooks.send.map(s => document.querySelector(s)).find(Boolean);
     if (!button || button.disabled) return false;
     button.click();
     return true;
@@ -589,10 +660,12 @@ function pageClickSend() {
 
 function pageSnapshotImages() {
     window.__lazyImageBefore = new Set(Array.from(document.images).map(img => img.currentSrc || img.src));
+    // Error text already on screen belongs to an earlier message and must not fail this run.
+    window.__lazyFailureBefore = document.body ? (document.body.innerText || '') : '';
     return document.querySelectorAll('[data-message-author-role="user"]').length;
 }
 
-function pageGenerationState() {
+function pageGenerationState(hooks) {
     const before = window.__lazyImageBefore || new Set();
     const images = [];
     Array.from(document.images).forEach(img => {
@@ -612,12 +685,47 @@ function pageGenerationState() {
         /creating image|generating image|editing image/i.test((main.innerText || '').slice(-3000));
     const replies = document.querySelectorAll('[data-message-author-role="assistant"]');
     const last = replies.length ? replies[replies.length - 1] : null;
+    const lastText = last ? last.innerText.trim().replace(/\s+/g, ' ').slice(0, 400) : '';
+
+    // Scan for ChatGPT's own error text. The user's own prompt is cut out first, so a prompt
+    // like "a poster saying something went wrong" cannot fail its own generation.
+    let scan = main.innerText || '';
+    Array.from(document.querySelectorAll('[data-message-author-role="user"]')).forEach(el => {
+        if (el.innerText) scan = scan.split(el.innerText).join(' ');
+    });
+    Array.from(document.querySelectorAll('[role="alert"]')).forEach(el => {
+        const alertText = el.innerText || '';
+        // Alerts usually sit inside main already; only add what is not there, so the message
+        // reported back to the panel is not doubled up.
+        if ((el.offsetWidth || el.offsetHeight) && alertText && scan.indexOf(alertText) === -1) {
+            scan += '\n' + alertText;
+        }
+    });
+
+    const seenBefore = window.__lazyFailureBefore || '';
+    let failure = null;
+    for (let i = 0; i < hooks.failures.length && !failure; i++) {
+        const hit = new RegExp(hooks.failures[i].pattern, 'i').exec(scan);
+        if (hit && seenBefore.indexOf(hit[0]) === -1) {
+            failure = {
+                code: hooks.failures[i].code,
+                text: scan.slice(Math.max(0, hit.index - 40), hit.index + 160).replace(/\s+/g, ' ').trim()
+            };
+        }
+    }
+    let refusal = false;
+    for (let i = 0; i < hooks.refusals.length && !refusal; i++) {
+        if (new RegExp(hooks.refusals[i], 'i').test(lastText)) refusal = true;
+    }
+
     return {
         images: images,
         streaming: streaming,
         busyUi: busyUi,
+        failure: failure,
+        refusal: refusal,
         userMessages: document.querySelectorAll('[data-message-author-role="user"]').length,
-        text: last ? last.innerText.trim().replace(/\s+/g, ' ').slice(0, 400) : ''
+        text: lastText
     };
 }
 
@@ -653,15 +761,25 @@ function pageDownloadImage(src) {
 async function waitForChatGPT(conn, s) {
     const start = Date.now();
     let challengeSince = 0;
+    let noComposerSince = 0;
     for (;;) {
         checkAlive(s);
         let st;
         // A navigation (e.g. a Cloudflare redirect) can destroy the context mid-call; just retry.
-        try { st = await evaluate(conn, pageLoadState, undefined, 15000); } catch (e) { st = { state: 'loading' }; }
+        try { st = await evaluate(conn, pageLoadState, PAGE_HOOKS, 15000); } catch (e) { st = { state: 'loading' }; }
 
         if (st.state === 'ready') return;
         if (st.state === 'logged_out') {
             throw bridgeError('NOT_LOGGED_IN', 'You are not logged in to ChatGPT. Click "Login to ChatGPT" first.');
+        }
+        // Logged in, page fully loaded, but no chat box matched any known selector.
+        if (st.state === 'no_composer') {
+            noComposerSince = noComposerSince || Date.now();
+            if (Date.now() - noComposerSince > UI_CHANGED_GRACE_MS) {
+                throw bridgeError('UI_CHANGED', UI_CHANGED_MESSAGE);
+            }
+        } else {
+            noComposerSince = 0;
         }
         if (st.state === 'challenge') {
             challengeSince = challengeSince || Date.now();
@@ -698,19 +816,19 @@ function squash(text) {
 // Lines are joined with Shift+Enter (ChatGPT's newline); a raw "\n" could submit early.
 async function typePrompt(conn, text) {
     const lines = text.replace(/\r\n?/g, '\n').split('\n');
-    if (!await evaluate(conn, pageFocusComposer)) throw bridgeError('SEND_FAILED', 'ChatGPT chat box not found.');
+    if (!await evaluate(conn, pageFocusComposer, PAGE_HOOKS)) throw bridgeError('UI_CHANGED', UI_CHANGED_MESSAGE);
     for (let i = 0; i < lines.length; i++) {
         if (i > 0) await pressKey(conn, 'Enter', 13, 8);
         if (lines[i]) await conn.send('Input.insertText', { text: lines[i] });
     }
     await sleep(300);
-    if (squash(await evaluate(conn, pageComposerText)) === squash(text)) return;
+    if (squash(await evaluate(conn, pageComposerText, PAGE_HOOKS)) === squash(text)) return;
 
     // Fallback: the whole prompt on one line.
-    await evaluate(conn, pageFocusComposer);
+    await evaluate(conn, pageFocusComposer, PAGE_HOOKS);
     await conn.send('Input.insertText', { text: squash(text) });
     await sleep(300);
-    if (squash(await evaluate(conn, pageComposerText)) !== squash(text)) {
+    if (squash(await evaluate(conn, pageComposerText, PAGE_HOOKS)) !== squash(text)) {
         throw bridgeError('SEND_FAILED', 'Could not type the prompt into ChatGPT.');
     }
 }
@@ -723,11 +841,11 @@ async function sendPrompt(conn, s, text) {
     let clicked = false;
     for (let i = 0; i < 20 && !clicked; i++) {
         checkAlive(s);
-        clicked = await evaluate(conn, pageClickSend);
+        clicked = await evaluate(conn, pageClickSend, PAGE_HOOKS);
         if (!clicked) await sleep(250);
     }
     if (!clicked) {
-        await evaluate(conn, pageFocusComposer);
+        await evaluate(conn, pageFocusComposer, PAGE_HOOKS);
         await pressKey(conn, 'End', 35);
         await pressKey(conn, 'Enter', 13, 0, '\r');
     }
@@ -737,10 +855,19 @@ async function sendPrompt(conn, s, text) {
         checkAlive(s);
         await sleep(500);
         try {
-            const st = await evaluate(conn, pageGenerationState);
+            const st = await evaluate(conn, pageGenerationState, PAGE_HOOKS);
+            // A usage limit or hard error shows up immediately; report it instead of waiting.
+            if (st.failure) throw bridgeError(st.failure.code, failureMessage(st.failure));
             if (st.userMessages > usersBefore || st.streaming) return;
-        } catch (e) {}
+        } catch (e) {
+            if (e.code) throw e;
+        }
     }
+
+    // Distinguish "ChatGPT moved its buttons" from "the send just didn't take".
+    let hooks = null;
+    try { hooks = await evaluate(conn, pageDiagnose, PAGE_HOOKS); } catch (e) {}
+    if (hooks && (!hooks.composer || !hooks.send)) throw bridgeError('UI_CHANGED', UI_CHANGED_MESSAGE);
     throw bridgeError('SEND_FAILED', 'ChatGPT did not accept the prompt. Please try again.');
 }
 
@@ -753,9 +880,12 @@ async function waitForImage(conn, s, progress) {
     for (;;) {
         checkAlive(s);
         let st = null;
-        try { st = await evaluate(conn, pageGenerationState, undefined, 15000); } catch (e) {}
+        try { st = await evaluate(conn, pageGenerationState, PAGE_HOOKS, 15000); } catch (e) {}
 
         if (st) {
+            // ChatGPT said outright that this failed — stop now instead of waiting out the timeout.
+            if (st.failure) throw bridgeError(st.failure.code, failureMessage(st.failure));
+
             const settled = st.images.filter(img => img.complete && !img.blurred)
                 .sort((a, b) => b.w * b.h - a.w * a.h)[0];
             if (settled) {
@@ -770,6 +900,10 @@ async function waitForImage(conn, s, progress) {
             }
 
             if (!st.images.length && !st.streaming && !st.busyUi && st.text) {
+                // An outright refusal will never turn into an image; don't sit out the grace period.
+                if (st.refusal) {
+                    throw bridgeError('NO_IMAGE', 'ChatGPT declined to create this image: "' + st.text + '"');
+                }
                 textOnlySince = textOnlySince || Date.now();
                 if (Date.now() - textOnlySince > TEXT_ONLY_REPLY_MS) {
                     throw bridgeError('NO_IMAGE', 'ChatGPT replied without an image: "' + st.text + '"');
@@ -846,6 +980,21 @@ function asProgress(fn) {
 async function generate(prompt, aspectRatio, onProgress) {
     const progress = asProgress(onProgress);
     begin();
+    try {
+        try {
+            return await attemptGenerate(prompt, aspectRatio, progress);
+        } catch (e) {
+            if (cancelRequested || !RETRYABLE[e.code]) throw e;
+            progress('ChatGPT hiccuped — trying once more…', 'launch');
+            await sleep(2000);
+            return await attemptGenerate(prompt, aspectRatio, progress);
+        }
+    } finally {
+        end();
+    }
+}
+
+async function attemptGenerate(prompt, aspectRatio, progress) {
     let s = null;
     let conn = null;
     try {
@@ -871,8 +1020,58 @@ async function generate(prompt, aspectRatio, onProgress) {
         };
     } catch (e) {
         if (cancelRequested) throw bridgeError('CANCELLED', 'Generation cancelled.');
-        if (e.code === 'NOT_LOGGED_IN') clearAuthenticated(s.browser);
+        if (e.code === 'NOT_LOGGED_IN' && s) clearAuthenticated(s.browser);
         throw e;
+    } finally {
+        if (conn) conn.close();
+        await closeBrowser(s);
+    }
+}
+
+// Checks the whole path without generating anything: browser, login, chat box, send button.
+// Text typed to reveal the send button is cleared again and never sent.
+async function diagnose() {
+    begin();
+    let s = null;
+    let conn = null;
+    const report = { browserName: null, loggedIn: false, composer: null, send: null, error: null };
+    try {
+        const browser = findBrowser();
+        report.browserName = browser ? browser.name : null;
+        if (!browser) {
+            report.error = 'No supported browser was found. Please install Google Chrome or Microsoft Edge.';
+            return report;
+        }
+
+        s = await launchBrowser(false, CHATGPT_URL);
+        conn = await connectToChatGPT(s);
+        try {
+            await waitForChatGPT(conn, s);
+            report.loggedIn = true;
+            markAuthenticated(browser);
+        } catch (e) {
+            report.error = e.message;
+            if (e.code === 'NOT_LOGGED_IN') {
+                clearAuthenticated(browser);
+                return report;
+            }
+            if (e.code !== 'UI_CHANGED') return report;
+            report.loggedIn = true;   // logged in fine, only the chat box was missing
+        }
+
+        report.composer = (await evaluate(conn, pageDiagnose, PAGE_HOOKS)).composer;
+        if (report.composer) {
+            await evaluate(conn, pageFocusComposer, PAGE_HOOKS);
+            await conn.send('Input.insertText', { text: 'test' });
+            await sleep(400);
+            report.send = (await evaluate(conn, pageDiagnose, PAGE_HOOKS)).send;
+            await evaluate(conn, pageFocusComposer, PAGE_HOOKS);
+            await pressKey(conn, 'Backspace', 8);
+        }
+        return report;
+    } catch (e) {
+        report.error = report.error || e.message;
+        return report;
     } finally {
         if (conn) conn.close();
         await closeBrowser(s);
@@ -1056,6 +1255,7 @@ window.BrowserBridge = {
     generate,
     login,
     checkLogin,
+    diagnose,
     cancel,
     shutdown,
     getStatus,
