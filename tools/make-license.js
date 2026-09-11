@@ -56,7 +56,7 @@ if (previous.length >= MAX_PER_EMAIL && !already && !force) {
     console.error('');
     console.error('That is the limit. If you are happy to give them another, run the same');
     console.error('command again with --force on the end.');
-    process.exit(1);
+    process.exit(2);   // 2 means "hit the limit", so Make Activation Key.bat can offer to override
 }
 
 const toBase64Url = buf => buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -74,11 +74,18 @@ try {
     console.error('(could not write ' + LOG_FILE + ': ' + e.message + ')');
 }
 
+let copied = false;
+try {
+    require('child_process').execSync('clip', { input: key });
+    copied = true;
+} catch (e) {}
+
 console.log('');
 console.log('Activation key for ' + email + '  (machine ' + machine + ', issued ' + issued + ')');
-console.log('Send the buyer everything between the lines:');
 console.log('------------------------------------------------------------');
 console.log(key);
 console.log('------------------------------------------------------------');
 console.log('');
-console.log('Logged to ' + LOG_FILE);
+console.log(copied
+    ? 'The key is already on your clipboard - just paste it into your email.'
+    : 'Copy everything between the lines and email it to the buyer.');
