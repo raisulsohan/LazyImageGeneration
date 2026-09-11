@@ -82,7 +82,28 @@
     </div>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    
+
+    <!-- Activation. Only ever shown in the paid build, which also loads js/license.js. -->
+    <div id="activationOverlay" class="activation-overlay" hidden>
+        <div class="activation-card">
+            <h2>Activate Lazy-Image</h2>
+            <p class="activation-intro">
+                Email the <b>Machine ID</b> below to <b>lettertosohan@gmail.com</b>
+                and you'll receive an activation key for this computer.
+            </p>
+            <label class="activation-label">Machine ID</label>
+            <div class="machine-row">
+                <code id="machineId">…</code>
+                <button id="copyMachineBtn" class="secondary-btn">Copy</button>
+            </div>
+            <label class="activation-label" for="licenseKeyInput">Activation key</label>
+            <textarea id="licenseKeyInput" class="license-input" placeholder="Paste the activation key you received"></textarea>
+            <button id="activateBtn" class="generate-btn">Activate</button>
+            <p id="activationError" class="activation-error" hidden></p>
+        </div>
+    </div>
+
+
     <script src="js/CSInterface.js"></script>
     <script src="js/utils/storage.js"></script>
     <script src="js/browser-bridge.js"></script>

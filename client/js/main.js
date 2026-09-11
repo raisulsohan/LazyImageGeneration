@@ -16,12 +16,16 @@ const HOST_NAME = IS_PREMIERE ? 'Premiere Pro' : 'After Effects';
 let isGenerating = false;
 let isLoggingIn = false;
 let isTesting = false;
+
+// Only the paid build ships js/license.js; without it the panel is unrestricted.
+const LICENSING = typeof window !== 'undefined' && !!window.LazyLicense;
 let imageFolderWatcher = null;
 let watchedImageFolder = null;
 
 // === EVENT LISTENERS ===
 document.addEventListener('DOMContentLoaded', () => {
     initializeUI();
+    refreshLicenseUI();
     updateConnectionUI();
     refreshImageFolderWatch();
 });
@@ -75,6 +79,12 @@ function initializeUI() {
         testBtn.addEventListener('click', handleTest);
     }
 
+    // Activation (paid build only)
+    const activateBtn = document.getElementById('activateBtn');
+    if (activateBtn) activateBtn.addEventListener('click', handleActivate);
+    const copyMachineBtn = document.getElementById('copyMachineBtn');
+    if (copyMachineBtn) copyMachineBtn.addEventListener('click', handleCopyMachineId);
+
     // Copy button
     const copyBtn = document.getElementById('copyBtn');
     if (copyBtn) {
@@ -121,6 +131,49 @@ async function handleLogin() {
     }
 }
 
+// === ACTIVATION (paid build only) ===
+// Shows the activation screen until a key signed for this machine is stored.
+function refreshLicenseUI() {
+    const overlay = document.getElementById('activationOverlay');
+    if (!overlay) return true;
+    if (!LICENSING) {
+        overlay.hidden = true;
+        return true;
+    }
+    const status = window.LazyLicense.status();
+    const idEl = document.getElementById('machineId');
+    if (idEl) idEl.textContent = status.machineId;
+    overlay.hidden = status.activated;
+    return status.activated;
+}
+
+function handleActivate() {
+    const input = document.getElementById('licenseKeyInput');
+    const error = document.getElementById('activationError');
+    const result = window.LazyLicense.activate(input ? input.value : '');
+    if (result.valid) {
+        if (error) error.hidden = true;
+        if (input) input.value = '';
+        refreshLicenseUI();
+        showStatus('✅ Activated — thank you! Log in to ChatGPT to get started.', 'success');
+    } else if (error) {
+        error.textContent = result.reason;
+        error.hidden = false;
+    }
+}
+
+function handleCopyMachineId() {
+    const idEl = document.getElementById('machineId');
+    if (!idEl) return;
+    const helper = document.createElement('textarea');
+    helper.value = idEl.textContent;
+    document.body.appendChild(helper);
+    helper.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(helper);
+    showToast('📋 Machine ID copied');
+}
+
 // === HANDLE TEST ===
 // Checks browser, login and ChatGPT's chat box without generating anything.
 async function handleTest() {
@@ -151,6 +204,7 @@ async function handleTest() {
 // === HANDLE GENERATE ===
 async function handleGenerate() {
     if (isGenerating) return;
+    if (!refreshLicenseUI()) return;
     if (isTesting) {
         showStatus('Wait for the connection test to finish.', 'warning');
         return;

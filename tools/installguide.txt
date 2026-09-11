@@ -1,0 +1,118 @@
+============================================================
+  LAZY-IMAGE
+  AI image generation inside After Effects and Premiere Pro
+============================================================
+
+WHAT YOU NEED
+  - Windows 10 or 11
+  - Adobe After Effects and/or Premiere Pro (CC 2019 or newer)
+  - Google Chrome or Microsoft Edge
+  - A ChatGPT account (free or paid)
+
+
+------------------------------------------------------------
+STEP 1 - INSTALL
+------------------------------------------------------------
+  1. Unzip this folder anywhere. The Desktop is fine.
+  2. Close After Effects and Premiere Pro if they are open.
+  3. Double-click  install.bat
+     If Windows blocks it, right-click it and choose
+     "Run as administrator".
+  4. Wait for "Installation complete", then press a key.
+
+
+------------------------------------------------------------
+STEP 2 - ACTIVATE
+------------------------------------------------------------
+  1. Open After Effects or Premiere Pro.
+  2. Go to:  Window  >  Extensions  >  Lazy-Image
+  3. The panel shows a Machine ID. Click Copy.
+  4. Email that Machine ID to:
+
+         lettertosohan@gmail.com
+
+     Use the same email address you bought the product with.
+  5. You will receive an activation key. Paste it into the
+     panel and click Activate.
+
+  The key works only on the computer it was issued for. If you
+  reinstall Windows or move to a new computer, email me and
+  I will send you a new key.
+
+
+------------------------------------------------------------
+STEP 3 - LOG IN TO CHATGPT (ONLY ONCE)
+------------------------------------------------------------
+  1. Click "Login to ChatGPT" in the panel.
+  2. A browser window opens. Log in as you normally would.
+  3. The window closes by itself once you are logged in.
+
+  You will not need to do this again. Lazy-Image uses its own
+  separate browser profile, so your everyday browser, bookmarks
+  and logins are not touched.
+
+
+------------------------------------------------------------
+HOW TO USE
+------------------------------------------------------------
+  1. Save your project first, so images are stored next to it.
+  2. Open the composition (After Effects) or the sequence
+     (Premiere Pro) you want the image to go into.
+  3. Type what you want, choose an aspect ratio, and click
+     "Generate Image".  (Ctrl+Enter also works.)
+
+  Each image is:
+    - saved in a "chatgptimages" folder next to your project
+    - added to a "ChatGptImages" folder/bin in your project
+    - placed on your timeline at the playhead
+
+  No browser window appears while generating. Chrome or Edge
+  runs hidden only while the image is being made, then closes.
+  It never takes keyboard focus away from Adobe.
+
+  Prompts work in any language, including Bangla.
+
+
+------------------------------------------------------------
+IF SOMETHING GOES WRONG
+------------------------------------------------------------
+  Click the "Test" button in the panel first. It checks the
+  browser, your ChatGPT login and the ChatGPT page, and tells
+  you exactly what is missing. It does not use up any images.
+
+  "Login required"
+      Click "Login to ChatGPT" and log in again.
+
+  "ChatGPT wants a quick human verification"
+      Click "Open ChatGPT", finish the check in the browser
+      window, close the window, then generate again.
+
+  "ChatGPT has hit a usage limit"
+      Your ChatGPT account has run out of images for now. Wait
+      for it to reset, or use a paid ChatGPT plan.
+
+  "ChatGPT has changed its website"
+      Email me. ChatGPT changed something and an update is needed.
+
+  Nothing happens at all
+      Make sure you restarted After Effects / Premiere Pro after
+      installing.
+
+
+------------------------------------------------------------
+UNINSTALL
+------------------------------------------------------------
+  Delete this folder:
+
+     %APPDATA%\Adobe\CEP\extensions\com.gimage.aftereffects
+
+
+------------------------------------------------------------
+SUPPORT
+------------------------------------------------------------
+  Raisul Sohan
+  lettertosohan@gmail.com
+  https://raisulsohan.com
+
+  Please do not share your activation key. Each key is tied to
+  one computer and is registered to the buyer's email address.

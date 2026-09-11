@@ -483,6 +483,79 @@ textarea:focus {
     z-index: 10;
 }
 
+.activation-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 8, 14, 0.92);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 50;
+}
+
+.activation-card {
+    width: 100%;
+    max-width: 460px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.activation-card h2 {
+    font-size: 17px;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.activation-intro {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.55;
+    margin: 0;
+}
+
+.activation-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-top: 6px;
+}
+
+.machine-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.machine-row code {
+    flex: 1;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 9px 12px;
+    font-size: 15px;
+    letter-spacing: 1.5px;
+    color: var(--accent-cyan);
+}
+
+.license-input {
+    min-height: 76px;
+    font-size: 12px;
+    line-height: 1.5;
+    word-break: break-all;
+}
+
+.activation-error {
+    font-size: 12.5px;
+    color: var(--accent-red);
+    margin: 0;
+}
+
 .toast.visible {
     opacity: 1;
     transform: translate(-50%, 0);
