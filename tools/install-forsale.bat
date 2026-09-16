@@ -40,9 +40,8 @@ echo.
 echo   Open After Effects or Premiere Pro, then go to:
 echo       Window  ^>  Extensions  ^>  Lazy-Image
 echo.
-echo   The panel will show a Machine ID. Email it to
-echo       lettertosohan@gmail.com
-echo   to receive your activation key.
+echo   Click "Login to ChatGPT" once and you are ready.
+echo   Lazy-Image is free - no activation key needed.
 echo ============================================================
 echo.
 pause

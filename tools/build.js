@@ -1,9 +1,12 @@
-// Builds the sellable package: obfuscated code, the licensing module, a copying
-// installer and the install guide. Nothing from tools/ or the repo ships.
+// Builds the release package: obfuscated code, a copying installer and the install
+// guide. Nothing from tools/ or the rest of the repo ships.
 //
 //   node tools/build.js
 //
 // Output: D:\GitHub\For Sale\Lazy-Image
+//
+// Lazy-Image is free. There is no licence check, so the package is exactly the panel in
+// this repo, with its JavaScript obfuscated.
 const fs = require('fs');
 const path = require('path');
 const obfuscator = require('javascript-obfuscator');
@@ -50,7 +53,6 @@ const SELF_CONTAINED = {
 const JS_FILES = [
     { from: 'client/js/CSInterface.js', options: FULL },
     { from: 'client/js/utils/storage.js', options: FULL },
-    { from: 'client/js/license.js', options: FULL },
     { from: 'client/js/browser-bridge.js', options: SELF_CONTAINED },
     { from: 'client/js/main.js', options: FULL }
 ];
@@ -58,6 +60,7 @@ const JS_FILES = [
 const COPY_FILES = [
     { from: 'CSXS/manifest.xml', to: 'CSXS/manifest.xml' },
     { from: 'host/index.jsx', to: 'host/index.jsx' },
+    { from: 'client/index.html', to: 'client/index.html' },
     { from: 'client/css/style.css', to: 'client/css/style.css' },
     { from: 'tools/installguide.txt', to: 'installguide.txt' },
     { from: 'tools/install-forsale.bat', to: 'install.bat' }
@@ -74,11 +77,6 @@ function kb(bytes) {
     return (bytes / 1024).toFixed(1) + ' KB';
 }
 
-if (!fs.existsSync(path.join(ROOT, 'client', 'js', 'license.js'))) {
-    console.error('client/js/license.js is missing — the paid build needs it.');
-    process.exit(1);
-}
-
 fs.rmSync(OUT, { recursive: true, force: true });
 fs.mkdirSync(OUT, { recursive: true });
 
@@ -89,25 +87,13 @@ let hidden = 0;
 JS_FILES.forEach(file => {
     const source = fs.readFileSync(path.join(ROOT, file.from), 'utf8');
     const code = obfuscator.obfuscate(source, file.options).getObfuscatedCode();
-    write(file.from.replace(/^client\//, 'client/'), code);
+    write(file.from, code);
     plain += source.length;
     hidden += code.length;
     console.log('  obfuscated  ' + file.from.padEnd(32) +
         kb(source.length).padStart(9) + '  ->  ' + kb(code.length).padStart(9) +
         (file.options === SELF_CONTAINED ? '   (page-safe profile)' : ''));
 });
-
-// The paid build loads the licensing module; the free repo build does not ship it.
-const html = fs.readFileSync(path.join(ROOT, 'client/index.html'), 'utf8');
-if (html.indexOf('<script src="js/license.js"') !== -1) {
-    console.error('\nclient/index.html already loads js/license.js — the repo build should not.');
-    process.exit(1);
-}
-write('client/index.html', html.replace(
-    '<script src="js/main.js"></script>',
-    '<script src="js/license.js"></script>\n    <script src="js/main.js"></script>'
-));
-console.log('  wrote       client/index.html (license.js injected)');
 
 COPY_FILES.forEach(file => {
     write(file.to, fs.readFileSync(path.join(ROOT, file.from)));
@@ -130,4 +116,4 @@ console.log('\nShipped:');
         }
     });
 })(OUT, '  ');
-console.log('\nZip the "Lazy-Image" folder and send it to the buyer.');
+console.log('\nZip the "Lazy-Image" folder to share it.');

@@ -2,7 +2,7 @@
 
 > **AI Image Generation directly inside Adobe After Effects and Premiere Pro using your existing ChatGPT account — No API keys, no Chrome Extension, no extra billing required!**
 
-Developed with ❤️ by **[Raisul Sohan](https://raisulsohan.com)** · **Version 2.4**
+Developed with ❤️ by **[Raisul Sohan](https://raisulsohan.com)** · **Version 2.5**
 
 ---
 
@@ -14,12 +14,10 @@ Developed with ❤️ by **[Raisul Sohan](https://raisulsohan.com)** · **Versio
 
 ## 🆕 What's New
 
-### 2.4
+### 2.5
 
-- **Instant activation** — the paid build now checks keys against SupportKori, so a buyer is running within seconds of paying instead of waiting for a key to be issued by hand. Keys bought directly by email still work, verified offline as before.
-- **Two computers per key**, with a **Deactivate this computer** button so a licence can be moved to a new machine without asking for help.
-- **Refunds revoke themselves** — a refunded or disabled key stops working on the next launch.
-- **Works offline for two weeks** — the licence check runs once at startup, never on the hot path, so a dropped connection or an outage never interrupts someone mid-project.
+- **Free forever** — no activation key, no sign-up, no payment. Install it and it works.
+- **Ready-made download** — every release now comes with a zip and a copying installer, no Git needed.
 
 ### 2.3
 
@@ -63,7 +61,8 @@ Instead of paying for expensive API credits or juggling between browser tabs and
 ## ✨ Key Features
 
 - 🎞️ **After Effects & Premiere Pro**: One extension for both apps — the same panel and features in each.
-- 🔑 **No API Key Required**: Works directly with your ChatGPT (Free / Plus / Pro) account.
+- 🆓 **Free Forever**: No payment, no activation key, no sign-up.
+- 🔑 **No API Key Required**: Works directly with your ChatGPT (Free / Go / Plus / Pro) account.
 - 🙈 **Invisible & On-Demand**: No browser window, no taskbar button, no background process — the browser runs hidden only during a generation, then exits.
 - 🌐 **Your Default Browser**: Uses whichever browser Windows is set to — Chrome, Edge, Brave or Vivaldi (falls back to Chrome, then Edge, for non-Chromium browsers like Firefox).
 - 🚫 **No Browser Extension**: Controls the browser directly via CDP — zero extension setup, zero friction.
@@ -113,13 +112,20 @@ graph LR
 
 ### Step 1: Install the Panel
 
-1. Clone or download this repository:
+**Easiest — download the release:**
+
+1. Download **`Lazy-Image-v2.5-Windows.zip`** from the [latest release](https://github.com/raisulsohan/LazyImageGeneration/releases/latest) and unzip it.
+2. Close After Effects and Premiere Pro, then double-click **`install.bat`** inside.
+
+**From source (for developers):**
+
+1. Clone this repository:
    ```bash
    git clone https://github.com/raisulsohan/LazyImageGeneration.git
    ```
 2. Double-click **`install.bat`** (or right-click and select **Run as Administrator**).
    - This enables Adobe CEP `PlayerDebugMode` in the Windows registry.
-   - Creates a symbolic link directly to `%APPDATA%\Adobe\CEP\extensions\com.gimage.aftereffects`.
+   - Creates a symbolic link directly to `%APPDATA%\Adobe\CEP\extensions\com.gimage.aftereffects`, so edits to the clone show up in the panel.
 
 ---
 

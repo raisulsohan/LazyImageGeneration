@@ -22,41 +22,15 @@ STEP 1 - INSTALL
 
 
 ------------------------------------------------------------
-STEP 2 - ACTIVATE
+STEP 2 - LOG IN TO CHATGPT (ONLY ONCE)
 ------------------------------------------------------------
   1. Open After Effects or Premiere Pro.
   2. Go to:  Window  >  Extensions  >  Lazy-Image
-  3. Paste your activation key and click Activate.
+  3. Click "Login to ChatGPT" in the panel.
+  4. A browser window opens. Log in as you normally would.
+  5. The window closes by itself once you are logged in.
 
-     Your key arrived the moment you bought Lazy-Image - it is
-     on the checkout screen, in your delivery email, and in your
-     SupportKori library. It looks like:
-
-         XXXXX-XXXXX-XXXXX-XXXXX
-
-  One key covers TWO computers - your desktop and your laptop,
-  for example. Just paste the same key on both.
-
-  MOVING TO A NEW COMPUTER
-     On the machine you are leaving, click "Deactivate this
-     computer" at the bottom of the panel. That frees the slot
-     straight away and you can use your key on the new machine.
-     Reinstalling Windows? Deactivate first if you can - if you
-     forgot, just email me and I will free it for you.
-
-  BOUGHT DIRECTLY FROM ME BY EMAIL?
-     Your key is a long one with a dot in the middle, made for
-     one specific computer. In the panel, open "Bought directly
-     from Raisul?", copy the Machine ID and email it to
-     lettertosohan@gmail.com to get your key.
-
-
-------------------------------------------------------------
-STEP 3 - LOG IN TO CHATGPT (ONLY ONCE)
-------------------------------------------------------------
-  1. Click "Login to ChatGPT" in the panel.
-  2. A browser window opens. Log in as you normally would.
-  3. The window closes by itself once you are logged in.
+  Lazy-Image is free. There is no activation key to enter.
 
   You will not need to do this again. Lazy-Image uses its own
   separate browser profile, so your everyday browser, bookmarks
@@ -125,6 +99,4 @@ SUPPORT
   lettertosohan@gmail.com
   https://raisulsohan.com
 
-  Please do not share your activation key. Each key allows two
-  computers and is registered to the buyer, so a shared key
-  stops working for everyone once its slots are used up.
+  Lazy-Image is free. Feel free to share it with friends.
