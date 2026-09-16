@@ -2,7 +2,7 @@
 
 > **AI Image Generation directly inside Adobe After Effects and Premiere Pro using your existing ChatGPT account — No API keys, no Chrome Extension, no extra billing required!**
 
-Developed with ❤️ by **[Raisul Sohan](https://raisulsohan.com)** · **Version 2.5**
+Developed with ❤️ by **[Raisul Sohan](https://raisulsohan.com)** · **Version 2.6**
 
 ---
 
@@ -13,6 +13,11 @@ Developed with ❤️ by **[Raisul Sohan](https://raisulsohan.com)** · **Versio
 ---
 
 ## 🆕 What's New
+
+### 2.6
+
+- **Signed installer** — the download is now a signed `.zxp` with a one-click `install.bat`, so Adobe loads the panel without switching on its developer debug mode.
+- **`uninstall.bat`** removes the panel cleanly, and asks before removing the saved ChatGPT login too.
 
 ### 2.5
 
@@ -114,8 +119,10 @@ graph LR
 
 **Easiest — download the release:**
 
-1. Download **`Lazy-Image-v2.5-Windows.zip`** from the [latest release](https://github.com/raisulsohan/LazyImageGeneration/releases/latest) and unzip it.
+1. Download **`Lazy-Image-v2.6-Windows.zip`** from the [latest release](https://github.com/raisulsohan/LazyImageGeneration/releases/latest) and unzip it.
 2. Close After Effects and Premiere Pro, then double-click **`install.bat`** inside.
+
+The panel is signed, so nothing else needs installing and Adobe's debug mode stays off. If the panel ever opens blank, run **`Fix a blank panel.bat`** from the same folder and restart the app. To remove Lazy-Image, run **`uninstall.bat`**.
 
 **From source (for developers):**
 
@@ -170,9 +177,22 @@ LazyImageGeneration/
 │   │       └── storage.js       # Persistent settings manager
 │   └── index.html               # Extension panel interface
 ├── host/
-│   └── index.jsx                # After Effects ExtendScript automation
-├── install.bat                  # 1-click Windows installer script
+│   └── index.jsx                # After Effects & Premiere Pro ExtendScript automation
+├── tools/
+│   ├── installer/               # install.bat, uninstall.bat and the guide shipped in the release zip
+│   ├── package-zxp.mjs          # Signs the panel as a .zxp and builds the release zip
+│   ├── get-zxpsigncmd.mjs       # Downloads Adobe's ZXP signing tool
+│   └── zip.mjs                  # Small ZIP writer for the release
+├── install.bat                  # Developer install: links this folder into Adobe
+├── LICENSE                      # MIT
 └── README.md                    # Documentation
+```
+
+### Building a release
+
+```bash
+npm run release:cert   # once — creates the signing certificate in "Signing key (do not share)", which git ignores
+npm run release        # signs the panel and writes the zip to ../00 Install from here
 ```
 
 ---

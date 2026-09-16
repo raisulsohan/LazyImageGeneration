@@ -1,6 +1,7 @@
 ============================================================
   LAZY-IMAGE
   AI image generation inside After Effects and Premiere Pro
+  Free and open source
 ============================================================
 
 WHAT YOU NEED
@@ -13,12 +14,13 @@ WHAT YOU NEED
 ------------------------------------------------------------
 STEP 1 - INSTALL
 ------------------------------------------------------------
-  1. Unzip this folder anywhere. The Desktop is fine.
+  1. Unzip this download anywhere. The Desktop is fine.
   2. Close After Effects and Premiere Pro if they are open.
   3. Double-click  install.bat
-     If Windows blocks it, right-click it and choose
-     "Run as administrator".
-  4. Wait for "Installation complete", then press a key.
+  4. Wait for "Installed", then press a key.
+
+  The panel is signed, so nothing else needs installing and
+  no Adobe setting has to be changed.
 
 
 ------------------------------------------------------------
@@ -65,6 +67,15 @@ IF SOMETHING GOES WRONG
   browser, your ChatGPT login and the ChatGPT page, and tells
   you exactly what is missing. It does not use up any images.
 
+  The panel is not in the Window menu
+      Restart After Effects / Premiere Pro. Adobe only looks
+      for new panels while the app is starting.
+
+  The panel opens blank
+      Run "Fix a blank panel.bat" and restart the app. On some
+      computers Adobe's signature check fails even for a
+      correctly signed panel; this tells Adobe to load it anyway.
+
   "Login required"
       Click "Login to ChatGPT" and log in again.
 
@@ -79,17 +90,12 @@ IF SOMETHING GOES WRONG
   "ChatGPT has changed its website"
       Email me. ChatGPT changed something and an update is needed.
 
-  Nothing happens at all
-      Make sure you restarted After Effects / Premiere Pro after
-      installing.
-
 
 ------------------------------------------------------------
 UNINSTALL
 ------------------------------------------------------------
-  Delete this folder:
-
-     %APPDATA%\Adobe\CEP\extensions\com.gimage.aftereffects
+  Double-click  uninstall.bat
+  It asks before removing your saved ChatGPT login as well.
 
 
 ------------------------------------------------------------
@@ -99,4 +105,7 @@ SUPPORT
   lettertosohan@gmail.com
   https://raisulsohan.com
 
-  Lazy-Image is free. Feel free to share it with friends.
+  Lazy-Image is free and open source (MIT licence):
+  https://github.com/raisulsohan/LazyImageGeneration
+
+  Feel free to share it with friends.
