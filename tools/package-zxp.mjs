@@ -33,15 +33,15 @@ const SHORT = VERSION.replace(/\.0$/, "");
  * share)", kept out of git twice over: .gitignore and .git/info/exclude (which
  * no commit can change). LAZYIMAGE_KEY_DIR overrides where it is.
  *
- * The finished zip goes to "00 Install from here" (D:\GitHub\00 Install from
+ * The finished zip goes to "00. Install from here" (D:\GitHub\00. Install from
  * here), which keeps only the newest Lazy-Image zip: the nearest folder of that
  * name beside the repository or beside any folder above it, so the repository
- * can sit inside a collection folder (D:\GitHub\LazySuite\LazyImageGeneration).
+ * can sit inside a collection folder (D:\GitHub\01. After Effects Tools\LazyImageGeneration).
  * Without one, it is made beside the repository. LAZYIMAGE_DOWNLOAD_DIR
  * overrides it.
  */
 function downloadsFolder() {
-  const name = "00 Install from here";
+  const name = "00. Install from here";
   for (let dir = resolve(root, ".."); ; dir = dirname(dir)) {
     if (existsSync(join(dir, name))) return join(dir, name);
     if (dirname(dir) === dir) return resolve(root, "..", name);

@@ -192,7 +192,7 @@ LazyImageGeneration/
 
 ```bash
 npm run release:cert   # once — creates the signing certificate in "Signing key (do not share)", which git ignores
-npm run release        # signs the panel and writes the zip to ../00 Install from here
+npm run release        # signs the panel and writes the zip to "00. Install from here"
 ```
 
 ---
