@@ -7,6 +7,16 @@ Developed with ❤️ by **[Raisul Sohan](https://raisulsohan.com)** · **Versio
 ---
 
 <p align="center">
+  <a href="assets/demo.mp4">
+    <img src="assets/demo.gif" alt="Lazy-Image in action: the one-time ChatGPT login, a prompt typed into the panel, the hidden browser generating the image, and the result landing on the After Effects timeline and in a Premiere Pro sequence" width="820">
+  </a>
+</p>
+
+<p align="center"><em>Prompt to timeline without leaving the app — <a href="assets/demo.mp4">watch it in 1080p60</a></em></p>
+
+---
+
+<p align="center">
   <img src="assets/preview-v2.png" alt="Lazy-Image After Effects Extension UI" width="750">
 </p>
 
@@ -163,6 +173,8 @@ The panel is signed, so nothing else needs installing and Adobe's debug mode sta
 ```
 LazyImageGeneration/
 ├── assets/
+│   ├── demo.gif                 # Animated walkthrough shown in this README
+│   ├── demo.mp4                 # The same walkthrough in 1080p60
 │   └── preview-v2.png           # Extension UI preview screenshot
 ├── CSXS/
 │   └── manifest.xml             # Adobe CEP extension manifest
