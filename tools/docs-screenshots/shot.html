@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lazy-Image</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Hind+Siliguri:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../client/css/style.css">
+    <style>
+        /* Screenshots only: freeze the spinners at a readable angle. */
+        .btn-spinner, .preview-area.loading .spinner { animation: none !important; transform: rotate(45deg); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo-title">
+                <h1>Lazy-Image <span class="app-tag" id="hostTag">After Effects</span></h1>
+                <span class="developer-credit">v2.6 · Developed By Raisul Sohan</span>
+            </div>
+            <div class="connection-status">
+                <button id="testBtn" class="login-btn subtle" title="Check the ChatGPT connection without generating an image">🔍 Test</button>
+                <button id="loginBtn" class="login-btn" title="Open a browser window once to log in to ChatGPT">🌐 Login to ChatGPT</button>
+                <span class="info-icon" title="Log in once with the button. After that, images are generated right here — ChatGPT runs invisibly only while an image is being created, then closes.">ℹ️</span>
+                <span class="connection-badge login-required">Login required</span>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div class="left-panel">
+                <section class="section prompt-section">
+                    <h2>Image Prompt</h2>
+                    <textarea id="promptInput" placeholder="Describe the image you want to generate (Any language supported: English, বাংলা, etc.)..."></textarea>
+                </section>
+
+                <section class="section">
+                    <h2>Aspect Ratio</h2>
+                    <div class="ratio-presets">
+                        <button class="ratio-btn active" data-ratio="1:1">1:1</button>
+                        <button class="ratio-btn" data-ratio="16:9">16:9</button>
+                        <button class="ratio-btn" data-ratio="9:16">9:16</button>
+                        <button class="ratio-btn" data-ratio="4:5">4:5</button>
+                        <button class="ratio-btn custom-btn" data-ratio="custom">Custom</button>
+                    </div>
+                    <div id="customRatioInput" class="custom-ratio-input" style="display: none;">
+                        <input type="number" id="ratioW" placeholder="16" min="1">
+                        <span class="ratio-separator">:</span>
+                        <input type="number" id="ratioH" placeholder="9" min="1">
+                    </div>
+                </section>
+
+                <button id="generateBtn" class="generate-btn">✨ Generate Image</button>
+                <button id="cancelBtn" class="cancel-btn" hidden>✕ Cancel</button>
+            </div>
+
+            <div class="right-panel">
+                <h2>Generated Image</h2>
+                <div id="previewArea" class="preview-area">
+                    <div class="empty-state">
+                        <span class="camera-icon">📷</span>
+                        <p>Generated image will appear here</p>
+                    </div>
+                    <div class="spinner" style="display: none;"></div>
+                </div>
+                <div id="actionButtons" class="action-buttons" style="display: none; margin-top: 15px; gap: 10px; justify-content: center;">
+                    <button id="copyBtn" class="secondary-btn" style="padding: 8px 15px; font-size: 13px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; color: white; cursor: pointer;">📋 Copy Image</button>
+                    <button id="openFolderBtn" class="secondary-btn" style="padding: 8px 15px; font-size: 13px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; color: white; cursor: pointer;">📂 Open Folder</button>
+                </div>
+
+                <div id="statusBar" class="status-bar" style="display: none;">
+                    <span class="status-text"></span>
+                    <span class="comp-badge"></span>
+                </div>
+
+                <div class="footer">
+                    <span class="footer-info">🔗 Auto-timeline import active</span>
+                    <span class="footer-meta"></span>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script>
+    // Puts the panel into one of the states main.js produces, chosen with ?state=…
+    // The class names and strings are the ones main.js uses.
+    (function () {
+        var q = new URLSearchParams(location.search);
+        var state = q.get('state') || 'login-required';
+        var PROMPT = 'A single red apple on a white table, studio lighting';
+
+        function el(id) { return document.getElementById(id); }
+        function badge(cls, text) {
+            var b = document.querySelector('.connection-badge');
+            b.className = 'connection-badge ' + cls;
+            b.textContent = text;
+        }
+        function status(type, text) {
+            var s = el('statusBar');
+            s.style.display = 'flex';
+            s.className = 'status-bar status-' + type;
+            s.querySelector('.status-text').textContent = text;
+        }
+        function host(name) { el('hostTag').textContent = name; }
+        function loggedIn() {
+            badge('connected', 'Logged in');
+            el('loginBtn').textContent = '🌐 Open ChatGPT';
+            el('loginBtn').classList.add('subtle');
+        }
+        function busy() {
+            el('loginBtn').disabled = true;
+            el('testBtn').disabled = true;
+        }
+        function ratio(r) {
+            document.querySelectorAll('.ratio-btn').forEach(function (b) {
+                b.classList.toggle('active', b.dataset.ratio === r);
+            });
+            el('customRatioInput').style.display = r === 'custom' ? 'flex' : 'none';
+        }
+        function prompt(t) { el('promptInput').value = t; }
+        function generating(pct) {
+            el('generateBtn').disabled = true;
+            el('generateBtn').innerHTML = '<span class="btn-spinner"></span> Generating...';
+            el('cancelBtn').hidden = false;
+            el('previewArea').classList.add('loading');
+            busy();
+            status('loading', '🔄 ChatGPT is creating your image… ' + pct + '%');
+        }
+        function showImage() {
+            var area = el('previewArea');
+            area.querySelector('.empty-state').style.display = 'none';
+            var img = document.createElement('img');
+            img.src = 'apple.png';
+            img.alt = 'Generated Image';
+            img.className = 'preview-image';
+            area.appendChild(img);
+            el('actionButtons').style.display = 'flex';
+            document.querySelector('.footer-meta').textContent = '1254x1254 PNG';
+        }
+        function toast(text) {
+            var t = el('toast');
+            t.textContent = text;
+            t.classList.add('visible');
+        }
+
+        switch (state) {
+            case 'login-required':
+                break;
+            case 'login-window':
+                badge('ready', 'Browser open');
+                el('loginBtn').textContent = '⏳ Waiting for login...';
+                busy();
+                status('warning', '🌐 Log in to ChatGPT in the Edge window — it closes by itself when you are done.');
+                break;
+            case 'logged-in':
+                loggedIn();
+                status('success', '✅ Logged in to ChatGPT! Generate images right here — no browser needed.');
+                break;
+            case 'test':
+                loggedIn();
+                status('success', '✅ Everything works — Browser: Edge · Login: OK · Chat box: found · Send button: found');
+                break;
+            case 'generating':
+                loggedIn();
+                prompt(PROMPT);
+                generating(46);
+                break;
+            case 'result-ae':
+                loggedIn();
+                prompt(PROMPT);
+                showImage();
+                status('success', '✅ Generated & added to timeline (Main Comp)');
+                break;
+            case 'result-premiere':
+                host('Premiere Pro');
+                loggedIn();
+                prompt(PROMPT);
+                showImage();
+                status('success', '✅ Generated & added to timeline (Sequence 01)');
+                break;
+            case 'bin-only-premiere':
+                host('Premiere Pro');
+                loggedIn();
+                prompt(PROMPT);
+                showImage();
+                status('warning', '✅ Generated & added to the ChatGptImages bin (no free video track at the playhead in Sequence 01)');
+                break;
+            case 'no-comp':
+                loggedIn();
+                prompt(PROMPT);
+                showImage();
+                status('warning', '✅ Generated & imported into ChatGptImages (open a comp to add it to the timeline)');
+                break;
+            case 'custom-ratio':
+                loggedIn();
+                prompt('A wide cinematic shot of a lighthouse at dusk');
+                ratio('custom');
+                el('ratioW').value = 21;
+                el('ratioH').value = 9;
+                break;
+            case 'verification':
+                loggedIn();
+                prompt(PROMPT);
+                status('warning', '⚠️ ChatGPT wants a quick human verification. Click "Open ChatGPT", complete it in the browser window, close the window, then generate again.');
+                break;
+            case 'toast':
+                loggedIn();
+                prompt(PROMPT);
+                showImage();
+                status('success', '✅ Generated & added to timeline (Main Comp)');
+                toast('🗑️ Image removed');
+                break;
+        }
+    })();
+    </script>
+</body>
+</html>

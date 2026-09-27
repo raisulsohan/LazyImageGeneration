@@ -26,6 +26,8 @@ ChatGPT's chat box and send button can be found. Its one-line report tells
 you which of the four to look at, and the fixes below are grouped the same
 way.
 
+<img src="images/status-test.png" width="470" alt="A green status bar: Everything works. Browser: Edge, Login: OK, Chat box: found, Send button: found">
+
 ---
 
 ## Installing and opening the panel
@@ -122,6 +124,11 @@ Cloudflare's or ChatGPT's *verify you are human* check stayed on screen for
 30 seconds. Click **🌐 Open ChatGPT**, complete the check in the window,
 close the window, and generate again. This happens more often right after a
 fresh login or on a new network.
+
+<img src="images/status-verification.png" width="470" alt="An orange status bar: ChatGPT wants a quick human verification. Click Open ChatGPT, complete it in the browser window, close the window, then generate again.">
+
+Orange messages like this one mean nothing is broken: ChatGPT needs
+something from you, and the message says what.
 
 ### "ChatGPT is showing a message that needs your attention"
 
@@ -227,6 +234,8 @@ it in, or open it first next time.
 Every video track has a clip inside the still's time span at the playhead,
 and a new track could not be added. The image is in the `ChatGptImages` bin;
 drag it onto the sequence. Lazy-Image never overwrites or moves your clips.
+
+<img src="images/status-bin-only.png" width="470" alt="An orange status bar: Generated and added to the ChatGptImages bin (no free video track at the playhead in Sequence 01)">
 
 ### After Effects: the layer went into the wrong composition
 

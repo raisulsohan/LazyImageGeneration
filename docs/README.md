@@ -8,7 +8,7 @@ timeline at the playhead. No API key, no browser extension, no extra billing.
 It is free, open source and runs entirely on your own computer.
 
 <p align="center">
-  <img src="../assets/preview-v2.png" alt="The Lazy-Image panel in After Effects: a prompt on the left, the aspect ratio buttons, and a generated apple on the right with the status Generated and added to timeline" width="750">
+  <img src="images/result-ae.png" alt="The Lazy-Image panel in After Effects: a prompt on the left, the aspect ratio buttons, and a generated apple on the right with the status Generated and added to timeline (Main Comp)" width="750">
 </p>
 
 The [README](../README.md) is the tour. These pages are the detail.

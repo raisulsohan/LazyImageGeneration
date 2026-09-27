@@ -12,6 +12,7 @@ a clone and how a release is built. *Written for Lazy-Image 2.6.*
 - [The browser bridge API](#the-browser-bridge-api)
 - [The host scripts](#the-host-scripts)
 - [Testing](#testing)
+- [The documentation screenshots](#the-documentation-screenshots)
 - [Building a release](#building-a-release)
 - [Publishing a version](#publishing-a-version)
 
@@ -77,10 +78,11 @@ LazyImageGeneration/
 │           └── fileManager.js   Left over from 1.x; not loaded by index.html
 ├── host/index.jsx               ExtendScript loaded by the manifest (two After Effects helpers from 1.x)
 ├── assets/                      README media: preview-v2.png, demo.gif, demo.mp4
-├── docs/                        This documentation
+├── docs/                        This documentation, with its screenshots in docs/images/
 ├── tools/
 │   ├── installer/               What ships beside the .zxp: install.bat, uninstall.bat,
 │   │                            "Fix a blank panel.bat", installguide.txt
+│   ├── docs-screenshots/        shot.html: the panel in each documented state, for the screenshots
 │   ├── get-zxpsigncmd.mjs       Downloads Adobe's ZXPSignCmd into tools/vendor/ (git-ignored)
 │   ├── package-zxp.mjs          Syncs the version, signs the panel, builds the release zip
 │   └── zip.mjs                  Small ZIP writer
@@ -311,6 +313,48 @@ can be inspected while a generation runs: read the port from
 `%APPDATA%\LazyImage\<Browser>Profile\DevToolsActivePort` and open
 `http://127.0.0.1:<port>/json/list` for its pages, or attach Chrome's
 `chrome://inspect` to that port.
+
+---
+
+## The documentation screenshots
+
+The pictures in `docs/images/` are the panel's own markup and stylesheet,
+rendered by a headless browser at the panel's default size and twice the
+pixel density, so they stay pixel-true to what the apps show and can be
+remade after any change to the panel.
+
+`tools/docs-screenshots/shot.html` is `client/index.html` with the panel's
+scripts replaced by one that puts the DOM into a documented state, using the
+same class names and strings as `main.js`. The state is chosen with
+`?state=`:
+
+| State | Shows |
+| :--- | :--- |
+| `login-required` | A fresh panel |
+| `login-window` | The login window open: *Browser open*, *Waiting for login…* |
+| `logged-in` | Just logged in |
+| `test` | The Test report, all four checks found |
+| `generating` | Mid-generation at 46 %, Cancel showing |
+| `result-ae` | An image placed in *Main Comp* (After Effects) |
+| `result-premiere` | The same in *Sequence 01* (Premiere Pro) |
+| `bin-only-premiere` | Premiere Pro with no free track |
+| `no-comp` | No composition open |
+| `custom-ratio` | Custom aspect ratio 21:9 |
+| `verification` | The human-verification warning |
+| `toast` | The *Image removed* toast |
+
+Render one with Edge or Chrome (the spinners are frozen by the page so they
+photograph well):
+
+```bat
+"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --headless=new --disable-gpu --hide-scrollbars --window-size=820,600 --force-device-scale-factor=2 --virtual-time-budget=10000 --user-data-dir=%TEMP%\lazy-image-shots --screenshot=docs\images\result-ae.png "file:///D:/path/to/LazyImageGeneration/tools/docs-screenshots/shot.html?state=result-ae"
+```
+
+The header, status bar, aspect-ratio and toast pictures are crops of those
+full frames (1640 × 1200): the header is the top 150 px; the status bars are
+the right column, `x` 672 to 1608, around the bar; the custom ratio is the
+left column, `x` 0 to 660, `y` 800 to 1050. The preview image, `apple.png`,
+is a genuine Lazy-Image result cropped from the 2.0 README screenshot.
 
 ---
 

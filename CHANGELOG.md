@@ -8,7 +8,9 @@ release is tagged `vX.Y` and published on the
 
 - **Documentation:** new `docs/` folder with the manual, how it works,
   troubleshooting (including every status bar message) and building from
-  source. This changelog. The README links to them.
+  source, with screenshots of the panel in every documented state
+  (`docs/images/`, rendered from `tools/docs-screenshots/shot.html`). This
+  changelog. The README links to them and shows the 2.6 panel.
 - The README shows the demo animation (`assets/demo.gif`, linking to the
   1080p60 `assets/demo.mp4`).
 - The release script finds the `00. Install from here` download folder from

@@ -90,6 +90,8 @@ That profile is separate from your everyday browser, so being logged in on
 chatgpt.com in your normal browser is not enough, and nothing Lazy-Image does
 touches your normal bookmarks, history or logins.
 
+<img src="images/header-login-required.png" width="750" alt="The panel header before the first login: the Test button, the Login to ChatGPT button and a red Login required badge">
+
 1. Open the panel. The badge in the header reads **Login required**.
 2. Click **🌐 Login to ChatGPT**. A normal, visible window of your browser
    opens on ChatGPT's login page and comes to the front; the badge changes
@@ -98,6 +100,10 @@ touches your normal bookmarks, history or logins.
 4. As soon as ChatGPT shows you as logged in, the window **closes by
    itself** and the badge turns green: **Logged in**. The status bar reads
    *Logged in to ChatGPT! Generate images right here — no browser needed.*
+
+<img src="images/login-window.png" width="750" alt="The panel while the login window is open: the badge reads Browser open, the button reads Waiting for login, and the status bar says to log in to ChatGPT in the Edge window, which closes by itself">
+
+<img src="images/header-logged-in.png" width="750" alt="The panel header after logging in: the button now reads Open ChatGPT and the badge is a green Logged in">
 
 You will not need to do this again, unless ChatGPT ends the session, you
 switch to a different default browser (each browser keeps its own
@@ -123,9 +129,7 @@ with something ChatGPT is showing.
 
 ## 4. The panel at a glance
 
-<p align="center">
-  <img src="../assets/preview-v2.png" alt="The Lazy-Image panel with a prompt, the aspect ratio buttons and a generated image" width="750">
-</p>
+<img src="images/result-ae.png" width="750" alt="The whole panel in After Effects after a generation: header with Test, Open ChatGPT and the Logged in badge; the prompt and aspect ratio buttons on the left; the generated apple, Copy Image and Open Folder, the green status bar and the footer on the right">
 
 **Header**
 
@@ -184,6 +188,8 @@ No browser window appears. The status bar counts up through the stages:
 | *Downloading image… 97%* | The finished picture is fetched from ChatGPT. |
 | *Saving image to project folder...* | The file is written and handed to the app. |
 
+<img src="images/generating.png" width="750" alt="The panel during a generation: the Generate button reads Generating with a spinner, a Cancel button is under it, the preview shows a spinner, and the status bar reads ChatGPT is creating your image, 46 percent">
+
 A typical image takes half a minute to a minute; ChatGPT's own speed decides.
 When it is done the preview shows the image, the footer shows its size, and
 the status bar reads **Generated & added to timeline (Main Comp)**, naming
@@ -240,6 +246,10 @@ as it is.
   timeline is ever overwritten or moved.** When no free track can be found,
   the image stays in the `ChatGptImages` bin and the status bar says so.
 
+<img src="images/result-premiere.png" width="750" alt="The same panel in Premiere Pro: the header tag reads Premiere Pro and the status bar reads Generated and added to timeline (Sequence 01)">
+
+<img src="images/status-bin-only.png" width="470" alt="An orange status bar: Generated and added to the ChatGptImages bin (no free video track at the playhead in Sequence 01)">
+
 If no composition or sequence is open, the image is imported into the
 project and the status bar tells you to open one; drag it from the
 `ChatGptImages` folder yourself.
@@ -247,6 +257,9 @@ project and the status bar tells you to open one; drag it from the
 **Deleting an image from the folder** while the panel is open shows a short
 *Image removed* toast in the panel, so you know the file the layer points at
 is gone. Nothing else happens; the layer stays where it is, offline.
+
+<img src="images/toast-image-removed.png" width="495" alt="The lower right of the panel with a small dark toast reading Image removed over the footer">
+
 
 ---
 
@@ -259,6 +272,8 @@ is gone. Nothing else happens; the layer stays where it is, offline.
 | **9:16** | Portrait, for Reels, Shorts and stories. |
 | **4:5** | The taller Instagram feed shape. |
 | **Custom** | Two boxes appear: width and height, as a ratio such as `21` and `9`. Left empty they count as 16 and 9. |
+
+<img src="images/custom-ratio.png" width="330" alt="The Aspect Ratio row with Custom selected and two boxes underneath reading 21 and 9">
 
 The ratio is a request to ChatGPT, written into the prompt. ChatGPT picks
 the pixel size itself and may round an unusual custom ratio to the nearest
@@ -290,9 +305,7 @@ is sent.
 
 After a few seconds the status bar reports the four checks in one line:
 
-```
-✅ Everything works — Browser: Edge · Login: OK · Chat box: found · Send button: found
-```
+<img src="images/status-test.png" width="470" alt="A green status bar: Everything works. Browser: Edge, Login: OK, Chat box: found, Send button: found">
 
 or, in orange, which one failed and why:
 

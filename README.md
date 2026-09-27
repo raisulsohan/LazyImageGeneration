@@ -17,7 +17,7 @@ Developed with ❤️ by **[Raisul Sohan](https://raisulsohan.com)** · **Versio
 ---
 
 <p align="center">
-  <img src="assets/preview-v2.png" alt="Lazy-Image After Effects Extension UI" width="750">
+  <img src="docs/images/result-ae.png" alt="The Lazy-Image panel in After Effects: a prompt on the left, the aspect ratio buttons, and a generated apple on the right with the status Generated and added to timeline (Main Comp)" width="750">
 </p>
 
 > 📖 **[Read the full documentation](docs/README.md)**: [the manual](docs/manual.md) (every button, where the images go, privacy), [how it works](docs/how-it-works.md) (the hidden browser, ChatGPT, the timeline import), [troubleshooting](docs/troubleshooting.md) (every status message and its fix) and [building from source](docs/development.md).
@@ -199,9 +199,11 @@ LazyImageGeneration/
 │   ├── manual.md                # Every part of the panel, where the images go, privacy
 │   ├── how-it-works.md          # The hidden browser, ChatGPT and the timeline import, explained
 │   ├── troubleshooting.md       # Symptoms, fixes and every status bar message
-│   └── development.md           # Architecture, running from a clone, bridge API, releases
+│   ├── development.md           # Architecture, running from a clone, bridge API, releases
+│   └── images/                  # Screenshots of the panel used by the pages above
 ├── tools/
 │   ├── installer/               # install.bat, uninstall.bat and the guide shipped in the release zip
+│   ├── docs-screenshots/        # The panel page and states the documentation screenshots are rendered from
 │   ├── package-zxp.mjs          # Signs the panel as a .zxp and builds the release zip
 │   ├── get-zxpsigncmd.mjs       # Downloads Adobe's ZXP signing tool
 │   └── zip.mjs                  # Small ZIP writer for the release
