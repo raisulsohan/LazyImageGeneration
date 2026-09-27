@@ -2,7 +2,7 @@
 
 > **AI Image Generation directly inside Adobe After Effects and Premiere Pro using your existing ChatGPT account — No API keys, no Chrome Extension, no extra billing required!**
 
-Developed with ❤️ by **[Raisul Sohan](https://raisulsohan.com)** · **Version 2.6**
+Developed with ❤️ by **[Raisul Sohan](https://raisulsohan.com)** · **Version 2.6** · 📖 **[Documentation](docs/README.md)** · [Changelog](CHANGELOG.md)
 
 ---
 
@@ -20,9 +20,13 @@ Developed with ❤️ by **[Raisul Sohan](https://raisulsohan.com)** · **Versio
   <img src="assets/preview-v2.png" alt="Lazy-Image After Effects Extension UI" width="750">
 </p>
 
+> 📖 **[Read the full documentation](docs/README.md)**: [the manual](docs/manual.md) (every button, where the images go, privacy), [how it works](docs/how-it-works.md) (the hidden browser, ChatGPT, the timeline import), [troubleshooting](docs/troubleshooting.md) (every status message and its fix) and [building from source](docs/development.md).
+
 ---
 
 ## 🆕 What's New
+
+The full list is in the [changelog](CHANGELOG.md).
 
 ### 2.6
 
@@ -190,14 +194,21 @@ LazyImageGeneration/
 │   └── index.html               # Extension panel interface
 ├── host/
 │   └── index.jsx                # After Effects & Premiere Pro ExtendScript automation
+├── docs/
+│   ├── README.md                # Documentation index
+│   ├── manual.md                # Every part of the panel, where the images go, privacy
+│   ├── how-it-works.md          # The hidden browser, ChatGPT and the timeline import, explained
+│   ├── troubleshooting.md       # Symptoms, fixes and every status bar message
+│   └── development.md           # Architecture, running from a clone, bridge API, releases
 ├── tools/
 │   ├── installer/               # install.bat, uninstall.bat and the guide shipped in the release zip
 │   ├── package-zxp.mjs          # Signs the panel as a .zxp and builds the release zip
 │   ├── get-zxpsigncmd.mjs       # Downloads Adobe's ZXP signing tool
 │   └── zip.mjs                  # Small ZIP writer for the release
 ├── install.bat                  # Developer install: links this folder into Adobe
+├── CHANGELOG.md                 # What changed in every version
 ├── LICENSE                      # MIT
-└── README.md                    # Documentation
+└── README.md                    # This tour
 ```
 
 ### Building a release
@@ -207,9 +218,13 @@ npm run release:cert   # once — creates the signing certificate in "Signing ke
 npm run release        # signs the panel and writes the zip to "00. Install from here"
 ```
 
+[Building from source](docs/development.md) has the details: running the panel from a clone, the rules the code keeps, the browser bridge API, the hand-testing list and how a release is signed and published.
+
 ---
 
 ## ❓ Frequently Asked Questions & Troubleshooting
+
+The short answers. **[If something goes wrong](docs/troubleshooting.md)** has every symptom, every status bar message and what to send when you report a problem.
 
 <details>
 <summary><b>Why does the status say "Login required"?</b></summary>
